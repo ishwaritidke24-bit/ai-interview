@@ -1,0 +1,16 @@
+{
+  "name": "ai-interview-prep-kit",
+  "version": "1.0.0",
+  "description": "AI Interview Prep Kit",
+  "scripts": {
+    "install:all": "npm install && cd frontend && npm install && cd ../backend && npm install",
+    "dev": "concurrently \"npm run dev:frontend\" \"npm run dev:backend\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "test": "echo \"TODO: run tests\"",
+    "evaluate": "node backend/src/evaluate/index.js"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2"
+  }
+}
