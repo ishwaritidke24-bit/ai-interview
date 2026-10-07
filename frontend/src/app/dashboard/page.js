@@ -2,10 +2,13 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 
 export default function Dashboard() {
   const [user, setUser] = useState(null);
+  const [kits, setKits] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [kitsLoading, setKitsLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
@@ -32,6 +35,27 @@ export default function Dashboard() {
     checkAuth();
   }, [router]);
 
+  useEffect(() => {
+    if (user) {
+      const fetchKits = async () => {
+        try {
+          const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/kits`, {
+            credentials: 'include'
+          });
+          if (res.ok) {
+            const data = await res.json();
+            setKits(data.kits);
+          }
+        } catch (error) {
+          console.error('Failed to fetch kits', error);
+        } finally {
+          setKitsLoading(false);
+        }
+      };
+      fetchKits();
+    }
+  }, [user]);
+
   const handleLogout = async () => {
     try {
       await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/logout`, {
@@ -53,7 +77,7 @@ export default function Dashboard() {
   }
 
   if (!user) {
-    return null; // Will redirect in useEffect
+    return null;
   }
 
   return (
@@ -78,27 +102,62 @@ export default function Dashboard() {
       </nav>
 
       <main className="max-w-7xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
-        <div className="bg-white shadow rounded-lg p-6 border border-gray-100">
-          <h2 className="text-2xl font-bold text-gray-900 mb-4">Your Interview Kits</h2>
-          <div className="border-2 border-dashed border-gray-300 rounded-lg h-64 flex flex-col items-center justify-center text-center p-6">
-            <svg className="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <div className="flex justify-between items-center mb-6">
+          <h2 className="text-2xl font-bold text-gray-900">Your Interview Kits</h2>
+          <Link
+            href="/dashboard/create"
+            className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+          >
+            Create New Kit
+          </Link>
+        </div>
+
+        {kitsLoading ? (
+          <div className="bg-white shadow rounded-lg p-6 border border-gray-100 text-center text-gray-500">
+            Loading your interview kits...
+          </div>
+        ) : kits.length === 0 ? (
+          <div className="bg-white shadow rounded-lg p-10 border border-gray-100 text-center">
+            <svg className="mx-auto h-12 w-12 text-gray-400 mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 002-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
             </svg>
-            <h3 className="text-lg font-medium text-gray-900">No kits created yet</h3>
-            <p className="mt-1 text-sm text-gray-500">
+            <h3 className="text-lg font-medium text-gray-900">No interview kits yet.</h3>
+            <p className="mt-1 text-sm text-gray-500 mb-6">
               Get started by uploading a job description to generate your first prep kit.
             </p>
-            <div className="mt-6">
-              <button
-                type="button"
-                className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 opacity-50 cursor-not-allowed"
-                disabled
-              >
-                Create New Kit (Coming Soon)
-              </button>
-            </div>
+            <Link
+              href="/dashboard/create"
+              className="inline-flex items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
+            >
+              Create New Kit
+            </Link>
           </div>
-        </div>
+        ) : (
+          <div className="bg-white shadow rounded-lg border border-gray-100 overflow-hidden">
+            <ul className="divide-y divide-gray-200">
+              {kits.map((kit) => (
+                <li key={kit.id} className="p-6 hover:bg-gray-50">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <h3 className="text-lg font-semibold text-gray-900">
+                        {kit.role || 'Untitled Role'} at {kit.company || kit.company_url || 'Unknown Company'}
+                      </h3>
+                      <p className="text-sm text-gray-500 mt-1">
+                        Created {new Date(kit.createdAt).toLocaleDateString()} • {kit.days_available} days schedule • Status: <span className="font-medium capitalize">{kit.status}</span>
+                      </p>
+                    </div>
+                    <Link
+                      href={`/dashboard/kits/${kit.id}`}
+                      className="inline-flex items-center px-4 py-2 border border-gray-300 shadow-sm text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                    >
+                      Open
+                    </Link>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
       </main>
     </div>
   );

@@ -5,6 +5,7 @@ const { MongoStore } = require('connect-mongo');
 
 const healthRoutes = require('./routes/health');
 const authRoutes = require('./routes/auth');
+const kitRoutes = require('./routes/kits');
 
 const app = express();
 
@@ -34,5 +35,6 @@ app.use(session({
 
 app.use('/api/health', healthRoutes);
 app.use('/api/auth', authRoutes);
+app.use('/api/kits', kitRoutes);
 
 module.exports = app;
