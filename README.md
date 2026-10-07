@@ -34,8 +34,14 @@ The backend uses a targeted crawling engine (\`src/services/retrieval\`) to rese
 - **Structured JSON Strategy:** The LLM client strictly enforces JSON extraction. It strips markdown blocks, parses the JSON, and structurally validates it against required schemas. If the model fails or returns malformed JSON, the pipeline catches it, retries up to 2 times with exponential backoff, and ultimately handles the error safely.
 - **Security / Untrusted Data:** Web crawled text and the Job Description are treated as untrusted data. They are structurally isolated from system instructions using strict delimiters (`--- UNTRUSTED DATA START ---`) and explicit instructions forbidding the LLM from executing commands found within the text.
 - **Company Brief & Requirement Extraction:** JD requirements are extracted strictly based on the text (no hallucination). "Required" skills map to priority `must`, while "Preferred" map to `nice`. They are categorized as `technical`, `behavioural`, or `domain`. Thin JDs produce correctly thin outputs. The company brief is generated entirely independently from the JD to prevent contamination.
+## Public Interview Research
+- **Search Strategy:** Evaluates any previously crawled `hiring_pages`. If the company is identifiable, a dynamic DuckDuckGo HTML search is leveraged (e.g., `<company> <role> interview process experiences`). No explicit API key is required.
+- **Data Protection:** DuckDuckGo HTML snippets are retrieved silently without executing JS, scraped using `cheerio`, and treated strictly as untrusted data safely wrapped inside `UNTRUSTED DATA` boundaries.
+- **Handling Failures:** If zero results are available or search queries timeout, the system gracefully sets `"status": "no_results"` and prevents hallucination, preserving the rest of the generation flow correctly. Missing interview info is explicitly recorded as a warning.
+- **Evidence Extraction:** The AI specifically categorizes evidence into strict arrays mapping specific rounds like `coding`, `system_design`, `behavioural`, and `hiring_manager` tied tightly to source URLs.
+
 ## Kit Structure
-See \`shared/schema.js\` for the canonical Kit definition.
+See `shared/schema.js` for the canonical Kit definition.
 
 ## Batch Evaluation
 Run batch evaluation using: \`npm run evaluate -- --input <cases.json> --output <kits.json>\`

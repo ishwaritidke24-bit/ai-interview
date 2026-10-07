@@ -59,6 +59,23 @@ exports.runInitialResearch = async (kitId, userId, jdText) => {
       kit.role = { title: 'Unknown Role', seniority: '', responsibilities: [], requirements: [] };
     }
 
+    // 4. Public Interview Research
+    kit.generationStatus = 'Researching interview process...';
+    await kit.save();
+
+    const { researchInterviewProcess } = require('./research/interviewResearch');
+    
+    // Filter hiring pages from the existing research pages
+    const hiringPages = research.pages.filter(p => p.category === 'hiring');
+    const interviewResearchData = await researchInterviewProcess(kit.source.company, kit.role.title, hiringPages);
+
+    kit.internal_research = {
+      company_pages: research.pages,
+      interview_process: interviewResearchData,
+      failed_sources: research.failed_sources,
+      warnings: research.research_warnings.concat(interviewResearchData.warnings || [])
+    };
+
     kit.status = 'completed'; // Mark completed for now since question generation isn't built yet
     kit.generationStatus = 'Ready';
     await kit.save();

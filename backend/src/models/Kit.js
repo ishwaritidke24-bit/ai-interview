@@ -65,6 +65,10 @@ const kitSchema = new mongoose.Schema({
     responsibilities: [{ type: String }],
     requirements: [requirementSchema]
   },
+  internal_research: {
+    type: mongoose.Schema.Types.Mixed,
+    default: {}
+  },
   questions: [questionSchema],
   flashcards: [flashcardSchema],
   schedule: {
