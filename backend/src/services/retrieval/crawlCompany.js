@@ -5,6 +5,7 @@ const { discoverLinks } = require('./discoverLinks');
 const { rankLinks, categorizePage } = require('./rankLinks');
 
 const MAX_PAGES = 3;
+const MAX_VISITS = 10;
 
 exports.crawlCompany = async (companyUrl) => {
   const visited = new Set();
@@ -18,13 +19,16 @@ exports.crawlCompany = async (companyUrl) => {
     research_warnings: []
   };
 
-  while (queue.length > 0 && results.pages.length < MAX_PAGES) {
+  let visits = 0;
+
+  while (queue.length > 0 && results.pages.length < MAX_PAGES && visits < MAX_VISITS) {
     // Take highest scored link
     const nextLink = queue.shift();
     const url = nextLink.absoluteUrl;
 
     if (visited.has(url)) continue;
     visited.add(url);
+    visits++;
 
     // Robots.txt check
     const allowed = await isAllowed(url);
