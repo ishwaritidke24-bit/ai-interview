@@ -76,15 +76,12 @@ exports.runInitialResearch = async (kitId, userId, jdText) => {
       warnings: research.research_warnings.concat(interviewResearchData.warnings || [])
     };
 
-    // 5. Generate Question Bank (Draft 1)
+    // 5. Generate Question Bank & Guarantee Coverage
     kit.generationStatus = 'Generating interview questions...';
     await kit.save();
 
-    const { generateQuestionsForKit } = require('./generation/questionGenerator');
-    const newQuestions = await generateQuestionsForKit(kit);
-    
-    // Only append successfully generated non-duplicate questions
-    kit.questions.push(...newQuestions);
+    const { runQuestionGenerationPipeline } = require('./generation/questionPipeline');
+    await runQuestionGenerationPipeline(kit);
 
     kit.status = 'completed'; // Mark completed
     kit.generationStatus = 'Ready';

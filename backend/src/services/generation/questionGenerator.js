@@ -41,7 +41,7 @@ const determineCategories = (requirement, role, interviewResearch) => {
   return cats;
 };
 
-exports.generateQuestionsForKit = async (kit) => {
+exports.generateQuestionsForKit = async (kit, targetRequirements = null) => {
   const generatedQuestions = [];
   const normalizedPrompts = new Set();
   const existingPrompts = kit.questions.map(q => normalizeString(q.prompt));
@@ -59,9 +59,10 @@ exports.generateQuestionsForKit = async (kit) => {
   }
 
   let nextQid = kit.questions.length + 1;
+  const requirementsToProcess = targetRequirements || kit.role.requirements;
 
   // Process sequentially to respect rate limits
-  for (const req of kit.role.requirements) {
+  for (const req of requirementsToProcess) {
     const categories = determineCategories(req, kit.role, kit.internal_research?.interview_process);
     const countNeeded = req.priority === 'must' ? QUESTIONS_PER_MUST : QUESTIONS_PER_NICE;
 
