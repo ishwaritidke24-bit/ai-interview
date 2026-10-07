@@ -83,6 +83,19 @@ exports.runInitialResearch = async (kitId, userId, jdText) => {
     const { runQuestionGenerationPipeline } = require('./generation/questionPipeline');
     await runQuestionGenerationPipeline(kit);
 
+    // 6. Schedule Allocation
+    kit.generationStatus = 'Allocating study schedule...';
+    await kit.save();
+
+    const { allocateSchedule } = require('./scheduling/scheduleAllocator');
+    const daysAvailable = kit.schedule?.days_available || 5; // Default to 5 if somehow missing
+    
+    kit.schedule = allocateSchedule({
+      requirements: kit.role.requirements,
+      questions: kit.questions,
+      daysAvailable: daysAvailable
+    });
+
     kit.status = 'completed'; // Mark completed
     kit.generationStatus = 'Ready';
     await kit.save();

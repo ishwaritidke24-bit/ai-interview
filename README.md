@@ -50,6 +50,12 @@ The backend uses a targeted crawling engine (\`src/services/retrieval\`) to rese
   - **Pass 2:** If any `must` requirement is detected as completely bare, explicitly generates missing data strictly targeting that missing requirement ID. Limits to `MAX_COVERAGE_PASSES = 2` to prevent infinite hanging.
   - **Honest Analytics:** Nice-to-have items are allowed to skip Pass 2 to preserve tokens. If a required MUST item completely fails out of Pass 2, it isn't faked, it's pushed to `uncovered_requirement_ids` honestly alongside a structured payload warning.
 
+## Schedule Allocation
+- **Algorithm:** Completely deterministic and arithmetic. Bypasses LLMs entirely to ensure output mathematically complies with edge cases.
+- **Duration Mapping:** Integer calculation exclusively. Difficulty 1 = 10m, Difficulty 2 = 15m, Difficulty 3 = 20m.
+- **Priority Rules:** Questions generated for `must-have` requirements are structurally weighed by `100` points. Their difficulty is multiplied by `10`. Sorting targets highest score first.
+- **Exact Distribution:** Days iterate round-robin pulling from the prioritized sorted stack. Handles `days = 60` safely by filling early days and appending `Review and consolidation` light days seamlessly, and correctly squashes `days = 1` perfectly into a single heavy schedule payload.
+
 ## Kit Structure
 See `shared/schema.js` for the canonical Kit definition.
 
