@@ -1,87 +1,110 @@
-# AI Interview Prep Kit
+# The AI Interview Prep Kit 🚀
 
-## Project Overview
-TODO: Provide an overview of the AI Interview Prep Kit.
+An end-to-end, multi-stage AI-powered interview preparation platform. It deterministically analyzes job descriptions alongside public company data to generate focused study requirements, robust question banks, schedules, and interactive flashcards.
 
-## Tech Stack
-- Frontend: Next.js + Tailwind CSS
-- Backend: Node.js + Express
-- Database: MongoDB
-- Language: JavaScript
+## 🏗️ Architecture
 
-## Architecture
-TODO: Describe the high-level architecture.
+This project is decoupled into two primary architectures:
+1. **Frontend (Next.js 14)**: Uses App Router, Server Components, and Tailwind CSS.
+2. **Backend (Node.js/Express)**: Uses Puppeteer/Cheerio for web crawling, Mongoose for persistence, and deeply integrates LLM generation pipelines.
 
-## Environment Variables
-See \`.env.example\` for required variables.
+### Data Flow Pipeline (The "Full Generation Flow")
+1. **Initial Research**: Deeply crawls the company URL (bypassing SSRF/private networks).
+2. **Company Brief & JD Extraction**: LLMs convert raw HTML and Job Descriptions into structural briefs and prioritized (`must`/`nice`) requirements.
+3. **Interview Research**: Crawls public hiring sub-pages looking for specific technical interview formats.
+4. **Question Generation**: Two-pass deterministic generation.
+5. **Coverage Gap Checker**: Evaluates if the LLM successfully generated questions covering 100% of the `must` requirements. If gaps exist, executes Pass 2 explicitly bridging the gaps.
+6. **Study Schedule Allocator**: Deterministic math distributes the finalized question load across the candidate's available days via arithmetic constraints.
+7. **Flashcards**: Generates interactive quick-hit study cards.
 
-## Local Setup
-1. Clone the repository
-2. Run \`npm install\` in the root, \`frontend\`, and \`backend\` directories, or run \`npm run install:all\` in root.
-3. Start the dev servers with \`npm run dev\` from the root.
+---
 
-## Research Pipeline
-The backend uses a targeted crawling engine (\`src/services/retrieval\`) to research a company before generating the kit.
-- **SSRF Protection:** \`urlSafety.js\` blocks localhost, private IPs (10.x.x.x, 192.168.x.x), and restricts to HTTP/HTTPS.
-- **Robots.txt:** The system checks \`/robots.txt\` and respects blocks before fetching pages.
-- **Fetching & Rate Limiting:** Uses `fetch` with an `AbortController` (15s timeout) and an exponential backoff wrapper handling 429 and 5xx responses. Restricts by content-type and size.
-- **Extraction:** Cleans HTML using `cheerio` to strip out scripts, styles, svgs, and navs, keeping pure readable text.
-- **Link Discovery & Ranking:** Parses links and resolves relative paths securely. Ranks links based on anchor text, path keywords, and depth. Hiring and team pages score highest; login/cart pages are heavily penalized.
-- **Crawl Strategy:** Uses a bounded crawl (MAX_PAGES = 5). Partial failures do not crash the pipeline, they are recorded in `failed_sources`.
+## 🔐 Security & Edge Cases Handled
 
-## LLM Integration & Extraction
-- **Provider:** Google Gemini (`gemini-1.5-flash`) was chosen for its generous free tier and fast JSON extraction capabilities.
-- **Structured JSON Strategy:** The LLM client strictly enforces JSON extraction. It strips markdown blocks, parses the JSON, and structurally validates it against required schemas. If the model fails or returns malformed JSON, the pipeline catches it, retries up to 2 times with exponential backoff, and ultimately handles the error safely.
-- **Security / Untrusted Data:** Web crawled text and the Job Description are treated as untrusted data. They are structurally isolated from system instructions using strict delimiters (`--- UNTRUSTED DATA START ---`) and explicit instructions forbidding the LLM from executing commands found within the text.
-- **Company Brief & Requirement Extraction:** JD requirements are extracted strictly based on the text (no hallucination). "Required" skills map to priority `must`, while "Preferred" map to `nice`. They are categorized as `technical`, `behavioural`, or `domain`. Thin JDs produce correctly thin outputs. The company brief is generated entirely independently from the JD to prevent contamination.
-## Public Interview Research
-- **Search Strategy:** Evaluates any previously crawled `hiring_pages`. If the company is identifiable, a dynamic DuckDuckGo HTML search is leveraged (e.g., `<company> <role> interview process experiences`). No explicit API key is required.
-- **Data Protection:** DuckDuckGo HTML snippets are retrieved silently without executing JS, scraped using `cheerio`, and treated strictly as untrusted data safely wrapped inside `UNTRUSTED DATA` boundaries.
-- **Handling Failures:** If zero results are available or search queries timeout, the system gracefully sets `"status": "no_results"` and prevents hallucination, preserving the rest of the generation flow correctly. Missing interview info is explicitly recorded as a warning.
-- **Evidence Extraction:** The AI specifically categorizes evidence into strict arrays mapping specific rounds like `coding`, `system_design`, `behavioural`, and `hiring_manager` tied tightly to source URLs.
+- **SSRF (Server-Side Request Forgery) Protection**: Crawler aggressively blocks loops to `localhost`, `127.0.0.1`, `10.x`, `192.168.x` internal ranges.
+- **Prompt Injection Defense**: All user JD text and crawled HTML are securely fenced in `--- UNTRUSTED DATA START ---` tags, explicitly directing the LLM to ignore embedded commands.
+- **LLM Output Failures / Retries**: Implements robust recursive `JSON.parse` validations. If output is garbled, it exponentially backs off and rewrites prompts up to `MAX_RETRIES`.
+- **Spam Prevention**: Rejects duplicate Job/URL generation attempts via `409 Conflict`.
+- **"Thin" Content**: Fluidly scales down requirements, questions, and schedules dynamically when JDs are abnormally short or hiring pages are non-existent (fails silently with warnings).
 
-## Question Bank Generation & Deterministic Coverage
-- **Architecture:** Bounded sequentially against the free-tier Gemini API to prevent 429 timeouts. Generates questions individually using highly specific prompts combining the Company Context, the extracted JD Requirement, and Public Interview Research.
-- **Category Logic:** Deterministically assigned in application code: Technical/Domain requirements receive `technical` (and `system-design` if keywords or interview research indicate it). Behavioural requirements strictly trigger `behavioural`. Domain may trigger `company-fit`.
-- **Question Counts:** 2 questions per `must` requirement, 1 question per `nice` requirement.
-- **Deterministic Coverage Loop:** A dedicated orchestration pipeline (`questionPipeline.js`) guarantees coverage:
-  - **Pass 1:** Full draft generation targeting all requirements.
-  - **Coverage Check:** Natively maps array relationships (`q.requirement_ids.includes(req.id)`) strictly bypassing LLM hallucination mapping.
-  - **Pass 2:** If any `must` requirement is detected as completely bare, explicitly generates missing data strictly targeting that missing requirement ID. Limits to `MAX_COVERAGE_PASSES = 2` to prevent infinite hanging.
-  - **Honest Analytics:** Nice-to-have items are allowed to skip Pass 2 to preserve tokens. If a required MUST item completely fails out of Pass 2, it isn't faked, it's pushed to `uncovered_requirement_ids` honestly alongside a structured payload warning.
+---
 
-## Schedule Allocation
-- **Algorithm:** Completely deterministic and arithmetic. Bypasses LLMs entirely to ensure output mathematically complies with edge cases.
-- **Duration Mapping:** Integer calculation exclusively. Difficulty 1 = 10m, Difficulty 2 = 15m, Difficulty 3 = 20m.
-- **Priority Rules:** Questions generated for `must-have` requirements are structurally weighed by `100` points. Their difficulty is multiplied by `10`. Sorting targets highest score first.
-- **Exact Distribution:** Days iterate round-robin pulling from the prioritized sorted stack. Handles `days = 60` safely by filling early days and appending `Review and consolidation` light days seamlessly, and correctly squashes `days = 1` perfectly into a single heavy schedule payload.
+## 🛠️ Environment Setup & Installation
 
-## Flashcard Generation
-- **Architecture:** Isolated from the core question-bank loop. Flashcards are sequentially mapped specifically to individual JD requirements to prevent hallucinating irrelevant technologies. 
-- **Context Awareness:** Feeds up to 3 previously generated questions as contextual hints to ensure flashcards logically support the study guide without blindly repeating full questions.
-- **Count Limits:** 2 cards per `must` requirement, 1 card per `nice` requirement. Ensures concise kits. 
-- **Stable IDs:** Uses completely native application-assigned `fX` mapping, forcefully preventing LLMs from fabricating `requirement_ids`. 
-- **Deduplication:** Normalizes text and purges exact semantic `front` duplicates safely. 
+Ensure you have Node.js 18+ and MongoDB installed.
 
-## Flashcard Practice Mode
-- **Persistence:** Isolates confidence data entirely into a Mongoose Map (`kit.practice`), tracking `attempts`, `confidence` (1-5 scale), and `lastPracticedAt` natively. This ensures canonical `flashcards` remain pristine and unharmed by study sessions.
-- **Ordering Algorithm:** Bypasses LLMs for a purely mathematical priority engine: Unpracticed cards appear first -> lowest confidence cards load next -> tie-broken by oldest `lastPracticedAt`. 
-- **Frontend Flow:** Protects answers behind a "Reveal Answer" click, seamlessly presenting the 1-5 confidence scoring panel only after the answer is revealed. Fully keyboard accessible.
+### 1. Clone & Install
+```bash
+git clone https://github.com/ishwaritidke24-bit/ai-interview.git
+cd ai-interview
 
-## Kit Structure
-See `shared/schema.js` for the canonical Kit definition.
+# Install Backend
+cd backend
+npm install
 
-## Batch Evaluation
-Run batch evaluation using: \`npm run evaluate -- --input <cases.json> --output <kits.json>\`
+# Install Frontend
+cd ../frontend
+npm install
+```
 
-## Testing
-TODO: Describe testing strategy.
+### 2. Configure Environment Variables
+Create `.env` in the `backend/` folder:
+```env
+PORT=5000
+MONGODB_URI=mongodb://127.0.0.1:27017/ai_interview_prep
+SESSION_SECRET=your_secure_random_string
+FRONTEND_URL=http://localhost:3000
+GEMINI_API_KEY=your_gemini_api_key  # Or OPENAI_API_KEY if utilizing OpenAI abstraction
+```
 
-## Deployment
-TODO: Describe deployment strategy (Vercel, Render, etc.).
+Create `.env.local` in the `frontend/` folder:
+```env
+NEXT_PUBLIC_API_URL=http://localhost:5000/api
+```
 
-## Design Decisions
-TODO: Outline major design decisions.
+### 3. Run Locally
+```bash
+# Terminal 1 (Backend)
+cd backend
+npm run dev
 
-## Known Limitations
-TODO: Outline limitations.
+# Terminal 2 (Frontend)
+cd frontend
+npm run dev
+```
+Navigate to `http://localhost:3000`.
+
+---
+
+## 🧪 Testing & Evaluation
+
+### Unit & System Tests
+We leverage Jest for comprehensive coverage of SSRF blockades, authorization spoofing, and schedule arithmetic algorithms.
+```bash
+cd backend
+npm test
+```
+
+### Mandatory Batch Evaluator (Appendix B)
+To trigger the automated background evaluator bypassing the frontend:
+```bash
+cd backend
+npm run evaluate -- --input cases.json --output results.json
+```
+The script structurally executes the complete pipeline, capturing unhandled runtime crashes securely, and outputs the finished `Kit` arrays mapping success metrics to JSON.
+
+---
+
+## 🚀 Deployment Guide
+
+### Backend (Render / Heroku / Fly.io)
+1. Provision a MongoDB Atlas cluster.
+2. Deploy the `backend/` directory as a Node.js Web Service.
+3. Set Environment Variables (`MONGODB_URI`, `FRONTEND_URL`, `GEMINI_API_KEY`, etc.).
+4. **Important**: Since the backend uses Puppeteer, you may need to specify a buildpack or install chromium dependencies (e.g., `PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true` and use a cloud browser, or deploy via Docker).
+
+### Frontend (Vercel)
+1. Import the repository into Vercel.
+2. Change the "Root Directory" to `frontend`.
+3. Add Environment Variable: `NEXT_PUBLIC_API_URL=https://your-backend-url.onrender.com/api`
+4. Deploy!
