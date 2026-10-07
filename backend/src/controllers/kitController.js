@@ -31,7 +31,7 @@ exports.createKit = async (req, res) => {
     const isDuplicate = existingKit.some(k => 
       k.source.company_url === kitData.company_url && 
       k.source.jd_chars === kitData.jd.length &&
-      (k.status === 'generating' || k.status === 'completed')
+      (k.status === 'generating' || k.status === 'completed' || k.status === 'queued')
     );
 
     if (isDuplicate) {
@@ -103,6 +103,55 @@ exports.getKitById = async (req, res) => {
        return res.status(404).json({ error: { message: 'Kit not found.' } });
     }
     res.status(500).json({ error: { message: 'Internal server error while fetching kit.' } });
+  }
+};
+
+exports.getKitStatus = async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    const { id } = req.params;
+
+    const kit = await kitService.getUserKitById(id, userId);
+    if (!kit) {
+      return res.status(404).json({ error: { message: 'Kit not found.' } });
+    }
+
+    const stages = {
+      'queued': { progress: 0, message: 'In queue...' },
+      'researching_company': { progress: 15, message: 'Researching company...' },
+      'extracting_requirements': { progress: 30, message: 'Extracting role requirements...' },
+      'researching_interviews': { progress: 40, message: 'Researching interview process...' },
+      'generating_questions': { progress: 60, message: 'Generating interview questions...' },
+      'checking_coverage': { progress: 70, message: 'Checking coverage...' },
+      'closing_coverage_gaps': { progress: 75, message: 'Closing coverage gaps...' },
+      'building_schedule': { progress: 85, message: 'Building schedule...' },
+      'generating_flashcards': { progress: 95, message: 'Creating flashcards...' },
+      'finalizing': { progress: 98, message: 'Finalizing kit...' },
+      'completed': { progress: 100, message: 'Your interview kit is ready.' },
+      'failed': { progress: 0, message: 'We couldn\'t complete your kit.' }
+    };
+
+    const stageData = stages[kit.generationStatus] || { progress: 50, message: kit.generationStatus || 'Generating...' };
+
+    if (kit.status === 'failed') {
+      return res.json({
+        status: kit.status,
+        stage: kit.generationStatus,
+        progress: 0,
+        message: 'We couldn\'t complete your kit.',
+        error: { message: kit.internal_research?.error || 'Generation failed.' }
+      });
+    }
+
+    res.json({
+      status: kit.status,
+      stage: kit.generationStatus,
+      progress: stageData.progress,
+      message: stageData.message
+    });
+  } catch (error) {
+    console.error('Error fetching kit status:', error);
+    res.status(500).json({ error: { message: 'Internal server error while fetching kit status.' } });
   }
 };
 
@@ -200,5 +249,43 @@ exports.regenerateSection = async (req, res) => {
   } catch (error) {
     console.error('Error regenerating section:', error);
     res.status(500).json({ error: { message: 'Internal server error while regenerating section.' } });
+  }
+};
+
+exports.retryGeneration = async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    const { id } = req.params;
+
+    const kit = await kitService.getUserKitById(id, userId);
+    if (!kit) return res.status(404).json({ error: { message: 'Kit not found.' } });
+
+    if (kit.status !== 'failed') {
+      return res.status(400).json({ error: { message: 'Only failed kits can be retried.' } });
+    }
+
+    kit.status = 'queued';
+    kit.generationStatus = 'queued';
+    
+    // Clear out partial results to ensure a fresh generation from scratch
+    kit.internal_research = {};
+    kit.company_brief = { summary: '', what_they_do: '', sources: [] };
+    kit.role = { title: '', seniority: '', responsibilities: [], requirements: [] };
+    kit.questions = [];
+    kit.flashcards = [];
+    kit.coverage = { uncovered_requirement_ids: [], passes: 0 };
+    
+    await kit.save();
+
+    // Fire background generation task
+    const researchService = require('../services/researchService');
+    researchService.runInitialResearch(kit._id, userId, kit.source.jd_text).catch(err => {
+      console.error('Background generation retry failed immediately:', err);
+    });
+
+    res.json({ success: true, kit });
+  } catch (error) {
+    console.error('Error retrying kit generation:', error);
+    res.status(500).json({ error: { message: 'Internal server error while retrying kit generation.' } });
   }
 };

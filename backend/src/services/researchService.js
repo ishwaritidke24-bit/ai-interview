@@ -18,7 +18,7 @@ exports.runInitialResearch = async (kitId, userId, jdText) => {
     if (!kit) throw new Error('Kit not found');
 
     kit.status = 'generating';
-    kit.generationStatus = 'Retrieving company and role information...';
+    kit.generationStatus = 'researching_company';
     await kit.save();
 
     // PARALLELIZE 1: Company Crawl + JD Extraction
@@ -42,14 +42,13 @@ exports.runInitialResearch = async (kitId, userId, jdText) => {
     };
     logTime('Crawl and JD Extraction', tCrawlAndJd);
 
-    kit.generationStatus = 'Generating company brief...';
+    kit.generationStatus = 'extracting_requirements';
     await kit.save();
 
     // 2. Generate Company Brief
     const tBrief = Date.now();
     let companyBriefData;
     if (research.pages.length > 0) {
-      // Limit context to reduce LLM overhead - just pass first 2 pages
       const reducedPages = research.pages.slice(0, 2);
       const { systemInstruction: briefSys, taskPrompt: briefTask } = getCompanyBriefPrompt(reducedPages);
       try {
@@ -72,7 +71,7 @@ exports.runInitialResearch = async (kitId, userId, jdText) => {
       kit.source.company = companyBriefData.company_name;
     }
 
-    kit.generationStatus = 'Researching interview process...';
+    kit.generationStatus = 'researching_interviews';
     await kit.save();
 
     // 3. Public Interview Research
@@ -90,16 +89,20 @@ exports.runInitialResearch = async (kitId, userId, jdText) => {
     logTime('Interview research', tInterview);
 
     // 4. Generate Question Bank & Guarantee Coverage
-    kit.generationStatus = 'Generating interview questions...';
+    kit.generationStatus = 'generating_questions';
     await kit.save();
     
     const tQuestions = Date.now();
     const { runQuestionGenerationPipeline } = require('./generation/questionPipeline');
-    await runQuestionGenerationPipeline(kit);
+    await runQuestionGenerationPipeline(kit, (stage) => {
+      // Allow pipeline to report its stages like checking_coverage, closing_coverage_gaps
+      kit.generationStatus = stage;
+      kit.save().catch(e => console.error('Error saving sub-stage', e));
+    });
     logTime('Questions & Coverage', tQuestions);
 
     // 5. Schedule Allocation
-    kit.generationStatus = 'Building schedule...';
+    kit.generationStatus = 'building_schedule';
     await kit.save();
     
     const tSchedule = Date.now();
@@ -114,7 +117,7 @@ exports.runInitialResearch = async (kitId, userId, jdText) => {
     logTime('Schedule allocation', tSchedule);
 
     // 6. Generate Flashcards
-    kit.generationStatus = 'Creating flashcards...';
+    kit.generationStatus = 'generating_flashcards';
     await kit.save();
     
     const tFlashcards = Date.now();
@@ -123,8 +126,11 @@ exports.runInitialResearch = async (kitId, userId, jdText) => {
     kit.flashcards.push(...flashcards);
     logTime('Flashcard generation', tFlashcards);
 
+    kit.generationStatus = 'finalizing';
+    await kit.save();
+
     kit.status = 'completed'; // Mark completed
-    kit.generationStatus = 'Ready';
+    kit.generationStatus = 'completed';
     await kit.save();
     
     logTime('Total generation', startTime);
@@ -136,7 +142,10 @@ exports.runInitialResearch = async (kitId, userId, jdText) => {
       const k = await Kit.findOne({ _id: kitId, userId });
       if (k) {
         k.status = 'failed';
-        k.generationStatus = 'Error: ' + error.message;
+        k.generationStatus = 'failed';
+        // Note: For actual error messaging, could store it inside internal_research or a specific error field.
+        k.internal_research = k.internal_research || {};
+        k.internal_research.error = error.message;
         await k.save();
       }
     } catch (e) {

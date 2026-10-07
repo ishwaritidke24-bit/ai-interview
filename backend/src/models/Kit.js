@@ -51,6 +51,7 @@ const kitSchema = new mongoose.Schema({
     role: { type: String },
     location: { type: String },
     jd_chars: { type: Number },
+    jd_text: { type: String },
     researched_at: { type: String },
     pages_used: [{ type: String }]
   },

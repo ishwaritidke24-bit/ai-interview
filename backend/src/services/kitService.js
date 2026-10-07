@@ -10,6 +10,7 @@ exports.createKit = async (userId, kitData) => {
       role: '',
       location: '',
       jd_chars: kitData.jd.length,
+      jd_text: kitData.jd,
       researched_at: '',
       pages_used: []
     },

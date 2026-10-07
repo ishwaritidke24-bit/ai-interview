@@ -19,12 +19,12 @@ This project is decoupled into two primary architectures:
 
 ---
 
-## 🔐 Security & Edge Cases Handled
-
+## 🔐 Security, Edge Cases & UX
+- **Asynchronous Generation & Polling**: Generating a kit is a heavy background task. The initial HTTP request (`POST /api/kits`) immediately queues the job and returns a kit ID. The frontend asynchronously polls a `GET /api/kits/:id/status` endpoint to stream deterministic stage-by-stage progress (e.g. `Extracting role requirements...`, `Generating questions...`) directly to the user, ensuring the browser never hangs or times out on long LLM pipelines.
+- **Resilience & Duplicate Protection**: Submitting identical jobs yields the existing queued/generating kit, preventing duplicate background storms. If the LLM pipeline ultimately fails, users can trigger a clean retry via `POST /api/kits/:id/retry` without re-entering form data.
 - **SSRF (Server-Side Request Forgery) Protection**: Crawler aggressively blocks loops to `localhost`, `127.0.0.1`, `10.x`, `192.168.x` internal ranges.
 - **Prompt Injection Defense**: All user JD text and crawled HTML are securely fenced in `--- UNTRUSTED DATA START ---` tags, explicitly directing the LLM to ignore embedded commands.
 - **LLM Output Failures / Retries**: Implements robust recursive `JSON.parse` validations. If output is garbled, it exponentially backs off and rewrites prompts up to `MAX_RETRIES`.
-- **Spam Prevention**: Rejects duplicate Job/URL generation attempts via `409 Conflict`.
 - **"Thin" Content**: Fluidly scales down requirements, questions, and schedules dynamically when JDs are abnormally short or hiring pages are non-existent (fails silently with warnings).
 
 ---

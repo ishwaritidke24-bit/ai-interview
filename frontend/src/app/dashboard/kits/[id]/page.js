@@ -15,10 +15,34 @@ function KitWorkspaceContent() {
   const [saveMessage, setSaveMessage] = useState('');
   const router = useRouter();
 
+  const [statusInfo, setStatusInfo] = useState(null);
+
   useEffect(() => {
     let timeoutId;
+    let isPollingStatus = false;
 
-    const fetchKit = async () => {
+    const fetchStatus = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/kits/${id}/status`, {
+          credentials: 'include'
+        });
+        if (!res.ok) throw new Error('Failed to fetch status.');
+        const data = await res.json();
+        setStatusInfo(data);
+        
+        if (data.status === 'completed' || data.status === 'failed') {
+          // It finished, fetch the full kit now
+          fetchFullKit();
+        } else {
+          timeoutId = setTimeout(fetchStatus, 2000); // poll every 2s
+        }
+      } catch (err) {
+        // Silent error on polling, just try again
+        timeoutId = setTimeout(fetchStatus, 2000);
+      }
+    };
+
+    const fetchFullKit = async () => {
       try {
         const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/kits/${id}`, {
           credentials: 'include'
@@ -30,18 +54,18 @@ function KitWorkspaceContent() {
         setKit(data.kit);
         setDraft(JSON.parse(JSON.stringify(data.kit)));
         
-        // If still generating, poll again in 3 seconds
-        if (data.kit.status === 'generating') {
-          timeoutId = setTimeout(fetchKit, 3000);
+        if (data.kit.status === 'generating' || data.kit.status === 'queued') {
+          isPollingStatus = true;
+          fetchStatus();
         }
       } catch (err) {
         setError(err.message);
       } finally {
-        setLoading(false);
+        if (!isPollingStatus) setLoading(false);
       }
     };
 
-    fetchKit();
+    fetchFullKit();
     
     return () => {
       if (timeoutId) clearTimeout(timeoutId);
@@ -143,33 +167,78 @@ function KitWorkspaceContent() {
     }
   };
 
-  if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><p className="text-gray-500 text-lg">Loading your interview kit...</p></div>;
+  // Status mapping to show checkboxes
+  const orderedStages = [
+    { id: 'queued', label: 'Preparing' },
+    { id: 'researching_company', label: 'Researching company' },
+    { id: 'extracting_requirements', label: 'Extracting role requirements' },
+    { id: 'researching_interviews', label: 'Researching interview process' },
+    { id: 'generating_questions', label: 'Generating questions' },
+    { id: 'checking_coverage', label: 'Checking coverage' },
+    { id: 'building_schedule', label: 'Building schedule' },
+    { id: 'generating_flashcards', label: 'Creating flashcards' }
+  ];
+
+  if (loading && !statusInfo) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><p className="text-gray-500 text-lg">Loading your interview kit...</p></div>;
   if (error) return <div className="min-h-screen flex items-center justify-center text-red-500">{error}</div>;
 
-  if (kit?.status === 'generating') {
+  if (statusInfo && (statusInfo.status === 'generating' || statusInfo.status === 'queued')) {
+    const currentStageIndex = orderedStages.findIndex(s => s.id === statusInfo.stage) || 0;
+    
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
         <div className="bg-white p-10 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center max-w-md w-full">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-6"></div>
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Building Your Kit</h2>
-          <p className="text-indigo-600 font-medium text-center bg-indigo-50 px-4 py-2 rounded-full shadow-inner w-full">
-            {kit.generationStatus || 'Starting AI research pipeline...'}
-          </p>
-          <p className="text-sm text-gray-400 mt-6 text-center">This process can take a few minutes as we crawl sources, analyze requirements, and generate study materials.</p>
+          <h2 className="text-xl font-bold text-gray-900 mb-6">Building Your Kit</h2>
+          
+          <div className="w-full mb-6 flex flex-col space-y-3">
+            {orderedStages.map((s, idx) => {
+              let icon = <span className="text-gray-300">○</span>;
+              let textClass = "text-gray-400";
+              
+              if (idx < currentStageIndex || (statusInfo.stage === 'finalizing' || statusInfo.status === 'completed')) {
+                icon = <span className="text-green-500">✓</span>;
+                textClass = "text-gray-600";
+              } else if (idx === currentStageIndex) {
+                icon = <span className="text-indigo-600 font-bold">→</span>;
+                textClass = "text-indigo-600 font-medium";
+              }
+
+              return (
+                <div key={s.id} className="flex items-center space-x-3">
+                  <div className="w-5 text-center">{icon}</div>
+                  <span className={textClass}>{s.label}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <div className="w-full mt-4">
+            <div className="text-right text-sm font-semibold text-indigo-600 mb-1">{statusInfo.progress}%</div>
+            <div className="w-full bg-gray-200 rounded-full h-2">
+              <div className="bg-indigo-600 h-2 rounded-full transition-all duration-500" style={{ width: `${statusInfo.progress}%` }}></div>
+            </div>
+            <p className="text-center text-sm text-gray-500 mt-3 font-medium">{statusInfo.message}</p>
+          </div>
         </div>
       </div>
     );
   }
 
-  if (kit?.status === 'failed') {
+  if (statusInfo?.status === 'failed' || kit?.status === 'failed') {
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
         <div className="bg-white p-10 rounded-2xl shadow-sm border border-red-100 flex flex-col items-center max-w-md w-full">
           <div className="text-red-500 text-4xl mb-6">⚠️</div>
           <h2 className="text-xl font-bold text-gray-900 mb-2">Generation Failed</h2>
-          <p className="text-gray-600 font-medium text-center mb-6">
-            An unrecoverable error occurred while generating this kit.
+          <p className="text-gray-600 font-medium text-center mb-4">
+            We couldn't complete your interview kit.
           </p>
+          {statusInfo?.error?.message && (
+            <div className="bg-red-50 p-3 rounded text-red-700 text-sm mb-6 w-full text-center">
+              {statusInfo.error.message}
+            </div>
+          )}
           <Link href="/dashboard" className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-6 py-2 rounded-lg font-medium transition">
             Return to Dashboard
           </Link>
