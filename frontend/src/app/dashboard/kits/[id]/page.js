@@ -16,25 +16,37 @@ function KitWorkspaceContent() {
   const router = useRouter();
 
   useEffect(() => {
-    fetchKit();
-  }, [id]);
+    let timeoutId;
 
-  const fetchKit = async () => {
-    try {
-      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/kits/${id}`, {
-        credentials: 'include'
-      });
-      if (res.status === 404) throw new Error('We couldn\'t load this kit.');
-      if (!res.ok) throw new Error('Failed to fetch kit.');
-      const data = await res.json();
-      setKit(data.kit);
-      setDraft(JSON.parse(JSON.stringify(data.kit))); // Deep clone for draft
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const fetchKit = async () => {
+      try {
+        const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/kits/${id}`, {
+          credentials: 'include'
+        });
+        if (res.status === 404) throw new Error('We couldn\'t load this kit.');
+        if (!res.ok) throw new Error('Failed to fetch kit.');
+        
+        const data = await res.json();
+        setKit(data.kit);
+        setDraft(JSON.parse(JSON.stringify(data.kit)));
+        
+        // If still generating, poll again in 3 seconds
+        if (data.kit.status === 'generating') {
+          timeoutId = setTimeout(fetchKit, 3000);
+        }
+      } catch (err) {
+        setError(err.message);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchKit();
+    
+    return () => {
+      if (timeoutId) clearTimeout(timeoutId);
+    };
+  }, [id]);
 
   const handleSave = async () => {
     try {
@@ -133,6 +145,38 @@ function KitWorkspaceContent() {
 
   if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><p className="text-gray-500 text-lg">Loading your interview kit...</p></div>;
   if (error) return <div className="min-h-screen flex items-center justify-center text-red-500">{error}</div>;
+
+  if (kit?.status === 'generating') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+        <div className="bg-white p-10 rounded-2xl shadow-sm border border-gray-100 flex flex-col items-center max-w-md w-full">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mb-6"></div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Building Your Kit</h2>
+          <p className="text-indigo-600 font-medium text-center bg-indigo-50 px-4 py-2 rounded-full shadow-inner w-full">
+            {kit.generationStatus || 'Starting AI research pipeline...'}
+          </p>
+          <p className="text-sm text-gray-400 mt-6 text-center">This process can take a few minutes as we crawl sources, analyze requirements, and generate study materials.</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (kit?.status === 'failed') {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
+        <div className="bg-white p-10 rounded-2xl shadow-sm border border-red-100 flex flex-col items-center max-w-md w-full">
+          <div className="text-red-500 text-4xl mb-6">⚠️</div>
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Generation Failed</h2>
+          <p className="text-gray-600 font-medium text-center mb-6">
+            An unrecoverable error occurred while generating this kit.
+          </p>
+          <Link href="/dashboard" className="bg-gray-100 hover:bg-gray-200 text-gray-800 px-6 py-2 rounded-lg font-medium transition">
+            Return to Dashboard
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 pb-20">

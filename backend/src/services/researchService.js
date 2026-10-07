@@ -113,6 +113,17 @@ exports.runInitialResearch = async (kitId, userId, jdText) => {
     return kit;
   } catch (error) {
     console.error('Research error:', error);
-    // In a real system, we'd update kit status to 'failed' here
+    // Persist failure state for UI to pick up
+    try {
+      const Kit = require('../models/Kit');
+      const k = await Kit.findOne({ _id: kitId, userId });
+      if (k) {
+        k.status = 'failed';
+        k.generationStatus = 'Error: ' + error.message;
+        await k.save();
+      }
+    } catch (e) {
+      console.error('Could not persist failure state:', e);
+    }
   }
 };
