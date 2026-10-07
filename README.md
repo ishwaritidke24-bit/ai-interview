@@ -21,7 +21,14 @@ See \`.env.example\` for required variables.
 3. Start the dev servers with \`npm run dev\` from the root.
 
 ## Research Pipeline
-TODO: Describe the research and generation pipeline.
+The backend uses a targeted crawling engine (\`src/services/retrieval\`) to research a company before generating the kit.
+- **SSRF Protection:** \`urlSafety.js\` blocks localhost, private IPs (10.x.x.x, 192.168.x.x), and restricts to HTTP/HTTPS.
+- **Robots.txt:** The system checks \`/robots.txt\` and respects blocks before fetching pages.
+- **Fetching & Rate Limiting:** Uses `fetch` with an `AbortController` (15s timeout) and an exponential backoff wrapper handling 429 and 5xx responses. Restricts by content-type and size.
+- **Extraction:** Cleans HTML using `cheerio` to strip out scripts, styles, svgs, and navs, keeping pure readable text.
+- **Link Discovery & Ranking:** Parses links and resolves relative paths securely. Ranks links based on anchor text, path keywords, and depth. Hiring and team pages score highest; login/cart pages are heavily penalized.
+- **Crawl Strategy:** Uses a bounded crawl (MAX_PAGES = 5). Partial failures do not crash the pipeline, they are recorded in `failed_sources`.
+
 
 ## Kit Structure
 See \`shared/schema.js\` for the canonical Kit definition.
