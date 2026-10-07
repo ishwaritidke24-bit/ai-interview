@@ -3,30 +3,22 @@ const { isValidUrl } = require('../utils/urlValidator');
 
 exports.createKit = async (req, res) => {
   try {
+    console.log('[KIT] POST /api/kits received');
     const { jd, company_url, days } = req.body;
-    const userId = req.session.userId; // Guaranteed by requireAuth
+    const userId = req.session.userId;
 
-    // Validation
     if (!jd || typeof jd !== 'string' || jd.trim().length === 0) {
       return res.status(400).json({ error: { message: 'Job description is required and must not be empty.' } });
     }
-
     if (!company_url || typeof company_url !== 'string' || !isValidUrl(company_url)) {
       return res.status(400).json({ error: { message: 'A valid company URL (http/https) is required.' } });
     }
-
     if (days === undefined || typeof days !== 'number' || !Number.isInteger(days) || days < 1 || days > 60) {
       return res.status(400).json({ error: { message: 'Days until interview must be an integer between 1 and 60.' } });
     }
 
-    // Pass data safely to service
-    const kitData = {
-      jd: jd.trim(),
-      company_url: company_url.trim(),
-      days
-    };
+    const kitData = { jd: jd.trim(), company_url: company_url.trim(), days };
 
-    // Prevent duplicate exact submissions from the same user to avoid LLM spam
     const existingKit = await kitService.getUserKits(userId);
     const isDuplicate = existingKit.some(k => 
       k.source.company_url === kitData.company_url && 
@@ -35,15 +27,17 @@ exports.createKit = async (req, res) => {
     );
 
     if (isDuplicate) {
+      console.log('[KIT] Duplicate kit rejected');
       return res.status(409).json({ error: { message: 'A kit for this exact job description and URL already exists.' } });
     }
 
     const newKit = await kitService.createKit(userId, kitData);
+    console.log(`[KIT] Kit created: ${newKit._id}`);
 
-    // Fire background generation task
     const researchService = require('../services/researchService');
+    console.log(`[KIT] Starting background generation: ${newKit._id}`);
     researchService.runInitialResearch(newKit._id, userId, kitData.jd).catch(err => {
-      console.error('Background generation failed immediately:', err);
+      console.error(`[GEN][ERROR] Background generation failed immediately:`, err);
     });
 
     res.status(201).json({
@@ -57,7 +51,7 @@ exports.createKit = async (req, res) => {
       }
     });
   } catch (error) {
-    console.error('Error creating kit:', error);
+    console.error('[GEN][ERROR] Error creating kit:', error);
     res.status(500).json({ error: { message: 'Internal server error while creating kit.' } });
   }
 };
@@ -132,6 +126,19 @@ exports.getKitStatus = async (req, res) => {
     };
 
     const stageData = stages[kit.generationStatus] || { progress: 50, message: kit.generationStatus || 'Generating...' };
+
+    // Detect stale kit
+    if (kit.status === 'generating' || kit.status === 'queued') {
+      const now = Date.now();
+      const lastUpdated = new Date(kit.updatedAt).getTime();
+      if (now - lastUpdated > 5 * 60 * 1000) {
+        kit.status = 'failed';
+        kit.generationStatus = 'failed';
+        kit.internal_research = kit.internal_research || {};
+        kit.internal_research.error = 'Generation timed out or server restarted.';
+        await kit.save();
+      }
+    }
 
     if (kit.status === 'failed') {
       return res.json({

@@ -28,6 +28,7 @@ function KitWorkspaceContent() {
         });
         if (!res.ok) throw new Error('Failed to fetch status.');
         const data = await res.json();
+        console.log('[UI] Status update:', data.stage, data.progress);
         setStatusInfo(data);
         
         if (data.status === 'completed' || data.status === 'failed') {
@@ -175,15 +176,17 @@ function KitWorkspaceContent() {
     { id: 'researching_interviews', label: 'Researching interview process' },
     { id: 'generating_questions', label: 'Generating questions' },
     { id: 'checking_coverage', label: 'Checking coverage' },
+    { id: 'closing_coverage_gaps', label: 'Closing coverage gaps' },
     { id: 'building_schedule', label: 'Building schedule' },
-    { id: 'generating_flashcards', label: 'Creating flashcards' }
+    { id: 'generating_flashcards', label: 'Creating flashcards' },
+    { id: 'finalizing', label: 'Finalizing kit' }
   ];
 
   if (loading && !statusInfo) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><p className="text-gray-500 text-lg">Loading your interview kit...</p></div>;
   if (error) return <div className="min-h-screen flex items-center justify-center text-red-500">{error}</div>;
 
   if (statusInfo && (statusInfo.status === 'generating' || statusInfo.status === 'queued')) {
-    const currentStageIndex = orderedStages.findIndex(s => s.id === statusInfo.stage) || 0;
+    const currentStageIndex = Math.max(0, orderedStages.findIndex(s => s.id === statusInfo.stage));
     
     return (
       <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-4">
