@@ -96,6 +96,16 @@ exports.runInitialResearch = async (kitId, userId, jdText) => {
       daysAvailable: daysAvailable
     });
 
+    // 7. Generate Flashcards
+    kit.generationStatus = 'Generating study flashcards...';
+    await kit.save();
+
+    const { generateFlashcardsForKit } = require('./generation/flashcardGenerator');
+    const flashcards = await generateFlashcardsForKit(kit);
+    
+    // Only append successfully generated valid flashcards
+    kit.flashcards.push(...flashcards);
+
     kit.status = 'completed'; // Mark completed
     kit.generationStatus = 'Ready';
     await kit.save();

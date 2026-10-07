@@ -56,6 +56,13 @@ The backend uses a targeted crawling engine (\`src/services/retrieval\`) to rese
 - **Priority Rules:** Questions generated for `must-have` requirements are structurally weighed by `100` points. Their difficulty is multiplied by `10`. Sorting targets highest score first.
 - **Exact Distribution:** Days iterate round-robin pulling from the prioritized sorted stack. Handles `days = 60` safely by filling early days and appending `Review and consolidation` light days seamlessly, and correctly squashes `days = 1` perfectly into a single heavy schedule payload.
 
+## Flashcard Generation
+- **Architecture:** Isolated from the core question-bank loop. Flashcards are sequentially mapped specifically to individual JD requirements to prevent hallucinating irrelevant technologies. 
+- **Context Awareness:** Feeds up to 3 previously generated questions as contextual hints to ensure flashcards logically support the study guide without blindly repeating full questions.
+- **Count Limits:** 2 cards per `must` requirement, 1 card per `nice` requirement. Ensures concise kits. 
+- **Stable IDs:** Uses completely native application-assigned `fX` mapping, forcefully preventing LLMs from fabricating `requirement_ids`. 
+- **Deduplication:** Normalizes text and purges exact semantic `front` duplicates safely. 
+
 ## Kit Structure
 See `shared/schema.js` for the canonical Kit definition.
 
