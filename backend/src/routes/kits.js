@@ -8,6 +8,7 @@ router.use(requireAuth);
 router.post('/', kitController.createKit);
 router.get('/', kitController.getKits);
 router.get('/:id', kitController.getKitById);
+router.put('/:id', kitController.updateKit);
 
 const practiceRouter = require('./practice');
 router.use('/:kitId/practice', practiceRouter);

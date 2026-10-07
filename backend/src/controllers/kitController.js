@@ -87,3 +87,32 @@ exports.getKitById = async (req, res) => {
     res.status(500).json({ error: { message: 'Internal server error while fetching kit.' } });
   }
 };
+
+exports.updateKit = async (req, res) => {
+  try {
+    const userId = req.session.userId;
+    const { id } = req.params;
+    
+    // Fields allowed to be updated from the builder
+    const { company_brief, role, questions, flashcards } = req.body;
+
+    const kit = await kitService.getUserKitById(id, userId);
+
+    if (!kit) {
+      return res.status(404).json({ error: { message: 'Kit not found.' } });
+    }
+
+    // Safely update provided fields
+    if (company_brief) kit.company_brief = company_brief;
+    if (role) kit.role = role;
+    if (questions) kit.questions = questions;
+    if (flashcards) kit.flashcards = flashcards;
+
+    await kit.save();
+
+    res.json({ success: true, kit });
+  } catch (error) {
+    console.error('Error updating kit:', error);
+    res.status(500).json({ error: { message: 'Internal server error while updating kit.' } });
+  }
+};
