@@ -40,6 +40,14 @@ The backend uses a targeted crawling engine (\`src/services/retrieval\`) to rese
 - **Handling Failures:** If zero results are available or search queries timeout, the system gracefully sets `"status": "no_results"` and prevents hallucination, preserving the rest of the generation flow correctly. Missing interview info is explicitly recorded as a warning.
 - **Evidence Extraction:** The AI specifically categorizes evidence into strict arrays mapping specific rounds like `coding`, `system_design`, `behavioural`, and `hiring_manager` tied tightly to source URLs.
 
+## Question Bank Generation
+- **Architecture:** Bounded sequentially against the free-tier Gemini API to prevent 429 timeouts. Generates questions individually using highly specific prompts combining the Company Context, the extracted JD Requirement, and Public Interview Research.
+- **Category Logic:** Deterministically assigned in application code: Technical/Domain requirements receive `technical` (and `system-design` if keywords or interview research indicate it). Behavioural requirements strictly trigger `behavioural`. Domain may trigger `company-fit`.
+- **Question Counts:** 2 questions per `must` requirement, 1 question per `nice` requirement.
+- **Deduplication:** Normalizes all generated prompts. Rejects identical semantic collisions.
+- **Validation:** Strictly asserts `difficulty` is precisely 1, 2, or 3. Enforces valid `requirement_ids` bindings natively mapped.
+- **Failure Resilience:** Partial individual generation failures do not erase successful questions. The pipeline persists any questions cleanly scraped during the loop.
+
 ## Kit Structure
 See `shared/schema.js` for the canonical Kit definition.
 
