@@ -1,8 +1,8 @@
 [
   {
-    "id": "c1",
-    "jd": "Software Engineer requirement: React, Node.js.",
-    "company_url": "https://example.com",
-    "days_available": 5
+    "id": "case-test-1",
+    "jd": "Software Engineer role for a fast-paced environment. Must have: 3+ years React, Node.js, and TypeScript. Experience with MongoDB is a must. Nice to have: Docker and CI/CD pipelines.",
+    "company_url": "https://www.example.com",
+    "days_available": 3
   }
 ]
