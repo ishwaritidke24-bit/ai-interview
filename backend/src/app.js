@@ -22,8 +22,10 @@ app.use(session({
   resave: false,
   saveUninitialized: false,
   store: MongoStore.create({
-    mongoUrl: process.env.MONGODB_URI,
+    mongoUrl: process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/ai-interview',
     collectionName: 'sessions'
+  }).on('error', function (error) {
+    console.error('Session store error:', error);
   }),
   cookie: {
     httpOnly: true,
