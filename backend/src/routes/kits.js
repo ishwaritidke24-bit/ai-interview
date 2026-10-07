@@ -9,6 +9,7 @@ router.post('/', kitController.createKit);
 router.get('/', kitController.getKits);
 router.get('/:id', kitController.getKitById);
 router.put('/:id', kitController.updateKit);
+router.post('/:id/regenerate', kitController.regenerateSection);
 
 const practiceRouter = require('./practice');
 router.use('/:kitId/practice', practiceRouter);

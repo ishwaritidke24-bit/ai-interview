@@ -106,6 +106,31 @@ function KitWorkspaceContent() {
     setDraft({ ...draft, flashcards: [...draft.flashcards, newF] });
   };
 
+  const handleRegenerate = async (section, category) => {
+    try {
+      setSaving(true);
+      setSaveMessage('Regenerating...');
+      
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/kits/${id}/regenerate`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ section, category }),
+        credentials: 'include'
+      });
+
+      if (!res.ok) throw new Error('Failed to regenerate section.');
+      const data = await res.json();
+      setKit(data.kit);
+      setDraft(JSON.parse(JSON.stringify(data.kit)));
+      setSaveMessage('Regenerated successfully!');
+      setTimeout(() => setSaveMessage(''), 3000);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setSaving(false);
+    }
+  };
+
   if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><p className="text-gray-500 text-lg">Loading your interview kit...</p></div>;
   if (error) return <div className="min-h-screen flex items-center justify-center text-red-500">{error}</div>;
 
@@ -130,7 +155,7 @@ function KitWorkspaceContent() {
                 disabled={saving}
                 className="bg-indigo-600 text-white px-4 py-2 rounded-lg font-medium hover:bg-indigo-700 transition disabled:opacity-50"
               >
-                {saving ? 'Saving...' : 'Save Changes'}
+                {saving ? 'Processing...' : 'Save Changes'}
               </button>
               <Link 
                 href={`/dashboard/kits/${id}/practice`}
@@ -147,7 +172,12 @@ function KitWorkspaceContent() {
         
         {/* Company Brief */}
         <section className="bg-white shadow-sm rounded-2xl p-6 border border-gray-100">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6 border-b pb-4">Company Brief</h2>
+          <div className="flex justify-between items-center mb-6 border-b pb-4">
+            <h2 className="text-2xl font-bold text-gray-900">Company Brief</h2>
+            <button onClick={() => handleRegenerate('company_brief')} className="bg-orange-100 text-orange-700 hover:bg-orange-200 px-4 py-2 rounded-lg text-sm font-medium transition">
+              ↻ Regenerate Brief
+            </button>
+          </div>
           <div className="space-y-4">
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Summary</label>
@@ -170,23 +200,34 @@ function KitWorkspaceContent() {
 
         {/* Questions */}
         <section className="bg-white shadow-sm rounded-2xl p-6 border border-gray-100">
-          <div className="flex justify-between items-center mb-6 border-b pb-4">
+          <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 border-b pb-4 gap-4">
             <h2 className="text-2xl font-bold text-gray-900">Question Bank</h2>
-            <button onClick={addQuestion} className="bg-gray-100 text-gray-700 hover:bg-gray-200 px-4 py-2 rounded-lg text-sm font-medium transition">
-              + Add Question
-            </button>
+            <div className="flex space-x-2">
+              <button onClick={() => handleRegenerate('questions', 'technical')} className="bg-orange-100 text-orange-700 hover:bg-orange-200 px-4 py-2 rounded-lg text-sm font-medium transition">
+                ↻ Regen Technical
+              </button>
+              <button onClick={() => handleRegenerate('questions', 'behavioural')} className="bg-orange-100 text-orange-700 hover:bg-orange-200 px-4 py-2 rounded-lg text-sm font-medium transition">
+                ↻ Regen Behavioural
+              </button>
+              <button onClick={addQuestion} className="bg-gray-100 text-gray-700 hover:bg-gray-200 px-4 py-2 rounded-lg text-sm font-medium transition">
+                + Add Question
+              </button>
+            </div>
           </div>
 
           <div className="space-y-6">
             {draft.questions.map((q, idx) => (
-              <div key={q.id || idx} className="bg-gray-50 rounded-xl p-5 border border-gray-200 relative group">
-                <div className="absolute top-4 right-4 flex space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div key={q.id || idx} className={`bg-gray-50 rounded-xl p-5 border relative group ${q.pinned ? 'border-yellow-300' : 'border-gray-200'}`}>
+                <div className="absolute top-4 right-4 flex items-center space-x-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                  <label className="text-xs font-semibold text-gray-500 flex items-center mr-2 cursor-pointer">
+                    <input type="checkbox" className="mr-1" checked={q.pinned || false} onChange={e => updateArrayItem('questions', idx, 'pinned', e.target.checked)} /> Pinned
+                  </label>
                   <button onClick={() => moveArrayItem('questions', idx, 'up')} disabled={idx===0} className="p-1 hover:bg-white rounded disabled:opacity-30">↑</button>
                   <button onClick={() => moveArrayItem('questions', idx, 'down')} disabled={idx===draft.questions.length-1} className="p-1 hover:bg-white rounded disabled:opacity-30">↓</button>
                   <button onClick={() => removeArrayItem('questions', idx)} className="p-1 text-red-500 hover:bg-white rounded">✕</button>
                 </div>
                 
-                <div className="grid grid-cols-2 gap-4 mb-4 pr-24">
+                <div className="grid grid-cols-2 gap-4 mb-4 pr-32">
                   <div>
                     <label className="block text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Category</label>
                     <select 
@@ -220,7 +261,7 @@ function KitWorkspaceContent() {
                     <textarea 
                       className="w-full p-3 border border-gray-200 rounded bg-white focus:ring-2 focus:ring-indigo-500"
                       value={q.prompt}
-                      onChange={e => updateArrayItem('questions', idx, 'prompt', e.target.value)}
+                      onChange={e => { updateArrayItem('questions', idx, 'prompt', e.target.value); updateArrayItem('questions', idx, 'pinned', true); }}
                     />
                   </div>
                   <div>
@@ -228,7 +269,7 @@ function KitWorkspaceContent() {
                     <textarea 
                       className="w-full p-3 border border-gray-200 rounded bg-white focus:ring-2 focus:ring-indigo-500"
                       value={q.answer_outline}
-                      onChange={e => updateArrayItem('questions', idx, 'answer_outline', e.target.value)}
+                      onChange={e => { updateArrayItem('questions', idx, 'answer_outline', e.target.value); updateArrayItem('questions', idx, 'pinned', true); }}
                     />
                   </div>
                 </div>
@@ -275,6 +316,29 @@ function KitWorkspaceContent() {
               </div>
             ))}
             {draft.flashcards.length === 0 && <p className="text-gray-500 italic text-center">No flashcards in this kit.</p>}
+          </div>
+        </section>
+
+        {/* Schedule */}
+        <section className="bg-white shadow-sm rounded-2xl p-6 border border-gray-100">
+          <div className="flex justify-between items-center mb-6 border-b pb-4">
+            <h2 className="text-2xl font-bold text-gray-900">Study Schedule</h2>
+            <button onClick={() => handleRegenerate('schedule')} className="bg-orange-100 text-orange-700 hover:bg-orange-200 px-4 py-2 rounded-lg text-sm font-medium transition">
+              ↻ Re-allocate Schedule
+            </button>
+          </div>
+          <div className="space-y-4">
+            {draft.schedule?.days?.map((day, idx) => (
+              <div key={idx} className="bg-gray-50 p-4 rounded border border-gray-200 flex justify-between items-center">
+                <div>
+                  <span className="font-bold text-gray-900">Day {day.day}</span>
+                  <span className="ml-4 text-gray-600 text-sm">{day.focus}</span>
+                </div>
+                <div className="text-sm font-semibold text-indigo-600">
+                  {day.minutes} mins • {day.question_ids?.length || 0} items
+                </div>
+              </div>
+            ))}
           </div>
         </section>
 
