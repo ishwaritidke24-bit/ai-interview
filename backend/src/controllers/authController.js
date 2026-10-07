@@ -11,8 +11,10 @@ exports.register = async (req, res) => {
       });
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
+
     // Check if user already exists
-    const existingUser = await User.findOne({ email: email.toLowerCase().trim() });
+    const existingUser = await User.findOne({ email: normalizedEmail });
     if (existingUser) {
       return res.status(409).json({
         error: { code: 'DUPLICATE_EMAIL', message: 'User with this email already exists.' }
@@ -25,7 +27,7 @@ exports.register = async (req, res) => {
 
     // Create user
     const newUser = new User({
-      email,
+      email: normalizedEmail,
       passwordHash
     });
 
@@ -40,6 +42,11 @@ exports.register = async (req, res) => {
     });
   } catch (error) {
     console.error('Registration error:', error);
+    if (error.code === 11000) {
+      return res.status(409).json({
+        error: { code: 'DUPLICATE_EMAIL', message: 'User with this email already exists.' }
+      });
+    }
     res.status(500).json({ error: { code: 'SERVER_ERROR', message: 'Internal server error.' } });
   }
 };
@@ -54,8 +61,10 @@ exports.login = async (req, res) => {
       });
     }
 
+    const normalizedEmail = email.toLowerCase().trim();
+
     // Find user and explicitly select passwordHash
-    const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+passwordHash');
+    const user = await User.findOne({ email: normalizedEmail }).select('+passwordHash');
     if (!user) {
       return res.status(401).json({
         error: { code: 'INVALID_CREDENTIALS', message: 'Invalid email or password.' }
