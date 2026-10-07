@@ -9,4 +9,7 @@ router.post('/', kitController.createKit);
 router.get('/', kitController.getKits);
 router.get('/:id', kitController.getKitById);
 
+const practiceRouter = require('./practice');
+router.use('/:kitId/practice', practiceRouter);
+
 module.exports = router;

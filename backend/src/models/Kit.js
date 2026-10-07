@@ -71,6 +71,15 @@ const kitSchema = new mongoose.Schema({
   },
   questions: [questionSchema],
   flashcards: [flashcardSchema],
+  practice: {
+    type: Map,
+    of: new mongoose.Schema({
+      confidence: { type: Number, min: 1, max: 5 },
+      attempts: { type: Number, default: 0 },
+      lastPracticedAt: { type: Date }
+    }, { _id: false }),
+    default: {}
+  },
   schedule: {
     days_available: { type: Number },
     days: [daySchema]

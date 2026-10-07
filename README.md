@@ -63,6 +63,11 @@ The backend uses a targeted crawling engine (\`src/services/retrieval\`) to rese
 - **Stable IDs:** Uses completely native application-assigned `fX` mapping, forcefully preventing LLMs from fabricating `requirement_ids`. 
 - **Deduplication:** Normalizes text and purges exact semantic `front` duplicates safely. 
 
+## Flashcard Practice Mode
+- **Persistence:** Isolates confidence data entirely into a Mongoose Map (`kit.practice`), tracking `attempts`, `confidence` (1-5 scale), and `lastPracticedAt` natively. This ensures canonical `flashcards` remain pristine and unharmed by study sessions.
+- **Ordering Algorithm:** Bypasses LLMs for a purely mathematical priority engine: Unpracticed cards appear first -> lowest confidence cards load next -> tie-broken by oldest `lastPracticedAt`. 
+- **Frontend Flow:** Protects answers behind a "Reveal Answer" click, seamlessly presenting the 1-5 confidence scoring panel only after the answer is revealed. Fully keyboard accessible.
+
 ## Kit Structure
 See `shared/schema.js` for the canonical Kit definition.
 
