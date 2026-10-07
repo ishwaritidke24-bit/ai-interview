@@ -26,6 +26,18 @@ exports.createKit = async (req, res) => {
       days
     };
 
+    // Prevent duplicate exact submissions from the same user to avoid LLM spam
+    const existingKit = await kitService.getUserKits(userId);
+    const isDuplicate = existingKit.some(k => 
+      k.source.company_url === kitData.company_url && 
+      k.source.jd_chars === kitData.jd.length &&
+      (k.status === 'generating' || k.status === 'completed')
+    );
+
+    if (isDuplicate) {
+      return res.status(409).json({ error: { message: 'A kit for this exact job description and URL already exists.' } });
+    }
+
     const newKit = await kitService.createKit(userId, kitData);
 
     res.status(201).json({
