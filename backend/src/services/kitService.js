@@ -3,7 +3,7 @@ const Kit = require('../models/Kit');
 exports.createKit = async (userId, kitData) => {
   const newKit = new Kit({
     userId,
-    status: 'generating',
+    status: 'queued',
     source: {
       company: '',
       company_url: kitData.company_url,

@@ -39,8 +39,8 @@ const kitSchema = new mongoose.Schema({
   },
   status: {
     type: String,
-    enum: ['draft', 'generating', 'completed', 'error'],
-    default: 'draft'
+    enum: ['queued', 'generating', 'completed', 'failed'],
+    default: 'queued'
   },
   generationStatus: {
     type: String

@@ -54,9 +54,9 @@ exports.generateQuestionsForKit = async (kit, targetRequirements = null) => {
   }
 
   let nextQid = kit.questions.length + 1;
-  // Cap at max 7 requirements to prevent excessive generation
+  // Cap at max 4 requirements to prevent excessive generation
   const reqs = targetRequirements || kit.role.requirements;
-  const requirementsToProcess = reqs.slice(0, 7);
+  const requirementsToProcess = reqs.slice(0, 4);
 
   // Simple concurrency limit (batch of 2)
   for (let i = 0; i < requirementsToProcess.length; i += 2) {

@@ -4,7 +4,7 @@ const { extractText, extractTitle } = require('./extractPage');
 const { discoverLinks } = require('./discoverLinks');
 const { rankLinks, categorizePage } = require('./rankLinks');
 
-const MAX_PAGES = 5;
+const MAX_PAGES = 3;
 
 exports.crawlCompany = async (companyUrl) => {
   const visited = new Set();
