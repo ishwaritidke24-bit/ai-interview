@@ -17,36 +17,53 @@ const callGeminiAPI = async (systemInstruction, taskPrompt, apiKey, model) => {
     }
   };
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 15000); // Strict 15s timeout
 
-  if (!res.ok) {
-    if (res.status === 429) throw new Error('LLM_RATE_LIMIT');
-    throw new Error(`LLM_API_ERROR_${res.status}`);
+  try {
+    const res = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+      signal: controller.signal
+    });
+
+    if (!res.ok) {
+      if (res.status === 429) {
+        const retryAfter = res.headers.get('retry-after');
+        throw new Error(`LLM_RATE_LIMIT:${retryAfter || 2}`);
+      }
+      throw new Error(`LLM_API_ERROR_${res.status}`);
+    }
+
+    const data = await res.json();
+    if (!data.candidates || data.candidates.length === 0) {
+      throw new Error('LLM_EMPTY_RESPONSE');
+    }
+
+    return data.candidates[0].content.parts[0].text;
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new Error('LLM_TIMEOUT');
+    }
+    throw error;
+  } finally {
+    clearTimeout(timeoutId);
   }
-
-  const data = await res.json();
-  if (!data.candidates || data.candidates.length === 0) {
-    throw new Error('LLM_EMPTY_RESPONSE');
-  }
-
-  return data.candidates[0].content.parts[0].text;
 };
 
 exports.generateStructured = async (systemInstruction, taskPrompt, requiredFields = [], options = {}) => {
   const apiKey = process.env.LLM_API_KEY;
   const model = process.env.LLM_MODEL || 'gemini-1.5-flash';
-  const maxRetries = options.retries || 2;
+  // Reduce retries to 1 to avoid hanging UI
+  const maxRetries = options.retries || 1;
   
   if (!apiKey) {
     throw new Error('LLM_API_KEY is not configured');
   }
 
   let lastError;
-  let delay = 2000;
+  let delay = 1000;
   
   for (let attempt = 0; attempt <= maxRetries; attempt++) {
     try {
@@ -59,16 +76,18 @@ exports.generateStructured = async (systemInstruction, taskPrompt, requiredField
       if (error.message.includes('LLM_JSON')) {
         // Validation error, append a correction request for the next prompt attempt
         taskPrompt += '\n\nIMPORTANT: Your previous output was invalid JSON or missing required fields. Ensure strictly compliant JSON format.';
-      } else if (error.message === 'LLM_RATE_LIMIT' || error.message.includes('LLM_API_ERROR_5')) {
-        // Rate limit or server error, backoff
+      } else if (error.message.startsWith('LLM_RATE_LIMIT')) {
+        const parts = error.message.split(':');
+        delay = parts[1] ? parseInt(parts[1]) * 1000 : delay * 2;
+      } else if (error.message === 'LLM_TIMEOUT' || error.message.includes('LLM_API_ERROR_5')) {
+        delay *= 2;
       } else {
         // Fatal error (e.g. 400 Bad Request, 401 Auth)
         break; 
       }
       
       if (attempt < maxRetries) {
-        await sleep(delay);
-        delay *= 2;
+        await sleep(Math.min(delay, 5000)); // Cap backoff wait at 5s to avoid freezing
       }
     }
   }

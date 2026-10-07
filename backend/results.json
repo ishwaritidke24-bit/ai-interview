@@ -1,0 +1,122 @@
+[
+  {
+    "id": "perf-test",
+    "status": "completed",
+    "generationStatus": "Ready",
+    "kit": {
+      "source": {
+        "company": "",
+        "company_url": "https://www.github.com",
+        "role": "",
+        "location": "",
+        "jd_chars": 69,
+        "researched_at": "",
+        "pages_used": []
+      },
+      "company_brief": {
+        "summary": "Information could not be extracted automatically.",
+        "what_they_do": "",
+        "sources": [
+          "https://github.com/",
+          "https://github.com/about",
+          "https://github.com/team",
+          "https://github.com/enterprise",
+          "https://github.com/about/diversity"
+        ]
+      },
+      "role": {
+        "title": "Unknown Role",
+        "seniority": "",
+        "responsibilities": [],
+        "requirements": []
+      },
+      "schedule": {
+        "days_available": 5,
+        "days": [
+          {
+            "day": 1,
+            "focus": "Review and consolidation",
+            "question_ids": [],
+            "minutes": 0
+          },
+          {
+            "day": 2,
+            "focus": "Review and consolidation",
+            "question_ids": [],
+            "minutes": 0
+          },
+          {
+            "day": 3,
+            "focus": "Review and consolidation",
+            "question_ids": [],
+            "minutes": 0
+          },
+          {
+            "day": 4,
+            "focus": "Review and consolidation",
+            "question_ids": [],
+            "minutes": 0
+          },
+          {
+            "day": 5,
+            "focus": "Review and consolidation",
+            "question_ids": [],
+            "minutes": 0
+          }
+        ]
+      },
+      "coverage": {
+        "uncovered_requirement_ids": [],
+        "passes": true
+      },
+      "_id": "6ac603709b9b4c21282fd693",
+      "userId": "6ac603709b9b4c21282fd692",
+      "status": "completed",
+      "questions": [],
+      "flashcards": [],
+      "practice": {},
+      "createdAt": "2026-10-07T08:31:44.471Z",
+      "updatedAt": "2026-10-07T08:31:50.201Z",
+      "__v": 2,
+      "generationStatus": "Ready",
+      "internal_research": {
+        "company_pages": [
+          {
+            "url": "https://github.com/",
+            "title": "GitHub · Change is constant. GitHub keeps you ahead. · GitHub · GitHubAmerican AirlinesDuolingoErnst and YoungFordInfoSysMercado LibreMercedes-BenzShopifyPhilipsSociété GénéraleSpotifyVodafoneAmerican AirlinesDuolingoErnst and YoungFordInfoSysMercado LibreMercedes-BenzShopifyPhilipsSociété GénéraleSpotifyVodafone",
+            "text": "Skip to content You signed in with another tab or window. Reload to refresh your session. You signed out in another tab or window. Reload to refresh your session. You switched accounts on another tab or window. Reload to refresh your session. Dismiss alert {{ message }} The future of building happens togetherTools and trends evolve, but collaboration endures. With GitHub, developers, agents, and code come together on one platform.Enter your emailSign up for GitHubDownload GitHub Copilot appGitHub featuresA demonstration animation of a code editor using GitHub Copilot Chat, where the user requests GitHub Copilot to refactor duplicated logic and extract it into a reusable function for a given code snippet.CodePlanCollaborateAutomateSecureCodeWrite, test, and fix code quickly with GitHub Copilot, from simple boilerplate to complex features.GitHub customersA Copilot chat window with the 'Ask' mode enabled. The user switches from 'Ask' mode to 'Agent' mode from a dropdown menu, then sends the prompt 'Update the website to allow searching for running races by name.' Copilot analyzes the codebase, then explains the required edits for three files before generating them. Copilot then confirms completion and summarizes the implemented changes for the new functionality allowing users to search races by name and view paginated, filtered results.Your AI partner everywhere. Copilot is ready to work with you at each step of the software development lifecycle.Explore GitHub CopilotDuolingo boosts developer speed by 25% with GitHub CopilotRead customer story2025 Gartner® Magic Quadrant™ for AI Code AssistantsRead industry reportAutomate your path to productionShip faster with secure, reliable CI/CD.Explore GitHub ActionsCode instantly from anywhereLaunch a full, cloud-based development environment in seconds.Explore GitHub CodespacesKeep momentum on the goManage projects and assign tasks to Copilot, all from your mobile device.Explore GitHub MobileShape your toolchainExtend your stack with apps, actions, and AI models.Explore GitHub MarketplaceApply fixes in seconds. Spend less time debugging and more time building features with Copilot Autofix.Explore GitHub Advanced SecuritySecurity debt, solved. Leverage security campaigns and Copilot Autofix to reduce application vulnerabilities.Learn about GitHub Code SecurityDependencies you can depend on. Update vulnerable dependencies with supported fixes for breaking changes.Learn about DependabotYour secrets, your business. Detect, prevent, and remediate leaked secrets across your organization.Learn about GitHub Secret Protection70% MTTR reduction with Copilot Autofix8.3M secret leaks stopped in the past 12 months with push protectionPlan with clarity. Organize everything from high-level roadmaps to everyday tasks.Explore GitHub Projects“It helps us onboard new software engineers and get them productive right away. We have all our source code, issues, and pull requests in one place... GitHub is a complete platform that frees us from menial tasks and enables us to do our best work.Fabian FaulhaberApplication manager at Mercedes-BenzKeep track of your tasksCreate issues and manage projects with tools that adapt to your code.Explore GitHub IssuesShare ideas and ask questionsCreate space for open-ended conversations alongside your project.Explore GitHub DiscussionsReview code changes togetherAssign initial reviews to Copilot for greater speed and quality.Explore code reviewFund open source projectsBecome an open source partner and support the tools and libraries that power your work.Explore GitHub SponsorsBy industryBy sizeBy use caseBy industryTechnologyFigma streamlines development and strengthens securityRead customer storyAutomotiveMercedes-Benz standardizes source code and automates onboardingRead customer storyFinancial servicesMercado Libre cuts coding time by 50%Read customer storyExplore customer storiesView all solutionsMillions of developers and businesses call GitHub homeWhether you’re scaling your development process or just learning how to code, GitHub is where you belong. Join the world’s most widely adopted developer platform to build the technologies that shape what’s next.Enter your emailSign up for GitHubDownload GitHub Copilot app You can’t perform that action at this time.",
+            "category": "general"
+          },
+          {
+            "url": "https://github.com/about",
+            "title": "About GitHub · GitHub",
+            "text": "Skip to content You signed in with another tab or window. Reload to refresh your session. You signed out in another tab or window. Reload to refresh your session. You switched accounts on another tab or window. Reload to refresh your session. Dismiss alert {{ message }} Let's build from hereThe complete developer platform to build, scale, and deliver secure software.225M+ Developers4M+ Organizations800M+ Repositories90% Fortune 100BlogRead up on product innovations and updates, company announcements, community spotlights, and more.Learn moreCommunity storiesDevelopers are building the future on GitHub every day, explore their stories, celebrate their accomplishments, and find inspiration for your own work.Learn moreCustomer storiesSee how some of the most influential businesses around the world use GitHub to provide the best services, products, and experiences for their customers.Learn moreOctoverseDive into the details with our annual State of the Octoverse report looking at the trends and patterns in the code and communities that build on GitHub.Learn morePressExplore the latest press stories on our company, products, and global community.Learn moreSocial ImpactLearn about how GitHub's people, products, and platform are creating positive and lasting change around the world.Learn moreBrand assetsWant to use Mona the octocat? Looking for the right way to display the GitHub logo for your latest project? Download the assets and see how and where to use them.Learn moreCareersHelp us build the home for all developers. We’re a passionate group of people dedicated to software development and collaboration. Come join us!Learn moreDiversity, Inclusions & BelongingWe are dedicated to building a community and team that reflects the world we live in and pushes the boundaries of software innovation.Learn moreGitHub StatusWe are always monitoring the status of github.com and all its related services. Updates and status interruptions are posted in real-time here.Learn moreLeadershipMeet the leadership team guiding us as we continue on this journey building the world's largest and most advanced software development platform in the world.Learn morePolicyWe're focused on fighting for developer rights by shaping the policies that promote their interests and the future of software.Learn more You can’t perform that action at this time.",
+            "category": "company"
+          },
+          {
+            "url": "https://github.com/team",
+            "title": "GitHub for teams · Build like the best teams on the planet · GitHub",
+            "text": "Skip to content You signed in with another tab or window. Reload to refresh your session. You signed out in another tab or window. Reload to refresh your session. You switched accounts on another tab or window. Reload to refresh your session. Dismiss alert {{ message }} GitHub for TeamsBuild like the best teams on the planetGive your team everything they need to ship: automated CI/CD, dependency security from Dependabot, and the world's largest developer community — all in one place.Get started with TeamSign up for free180M+ developers1B+ contributions4M+ organizationsConnect your favorite toolsBuild the way that works best for you with support for all your go-to integrations, including Slack, Jira, and more.Add your team in a clickSeamlessly update permissions and add new users as you build, whether you’re on a team of two or two thousand.Speed up code reviewStep up your code quality with code review tools that fit right into your workflow.Build CI/CD workflows that work for youBuild CI/CD workflows that work for youExplore GitHub ActionsStreamline your CI/CD: Build, test, and deploy projects on any OS, language, or cloud.Choose from thousands of actions: Find community-built GitHub Actions workflows on GitHub Marketplace, or build your own.Respond to GitHub events: Trigger workflows based on GitHub events, including push, issue creation, new releases, and more.Stay focused on developmentGrant the right access to your teamEasily grant, limit, or revoke access for collaborators inside and outside your company.See GitHub securityKeep secrets safeGet alerts when secrets are committed to your repositories—and notify over 30 cloud service providers automatically.See GitHub securityFind vulnerable dependenciesScan your dependencies automatically. When a vulnerability is found, we’ll open a pull request with suggested fixes.See GitHub security“As a team, we’re way more confident that we’re in tune. We can all see our work, feedback, and roadmap going through GitHub.Lee AdkinsHead of Engineering Peak MoneyGitHub FreeBasics for teams and developers$0USDGet started for freeWhat's includedUnlimited public/private repositories2,000 Actions minutes/month500MB of GitHub Packages storageDependabotCommunity SupportNeed SAML, self-hosting, or priority support? Learn more about GitHub EnterpriseGitHub TeamAdvanced collaboration and deployment features for teams$4USDper user / monthContinue with teamEverything included in Free, plus ...3,000 Actions minutes/month2GB of GitHub Packages storageGitHub CodespacesProtected branchesMultiple reviewers in pull requestsCode ownersDraft pull requestsRequired reviewersPages and WikisWeb-based supportNeed something else? Compare all plansCompare all plansBuild like the bestGet the complete developer platformGet started with TeamSign up for freeGitHub Actions cheat sheetEverything you need to know about getting started with GitHub Actions.Learn moreCollaboration is the key to DevOps successIn a recent TechTarget study, 70 percent of organizations reported they had adopted DevOps.Learn moreHow healthy teams build better softwareYour culture is key to recruiting and retaining the talent you need to ship exceptional customer experiences.Learn moreFrequently Asked QuestionsWhat’s the difference between GitHub Free and GitHub Team?GitHub Team includes everything in GitHub Free, plus advanced collaboration features like protected branches, code owners, GitHub Codespaces, more GitHub Actions minutes, and additional GitHub Packages storage.Can I upgrade from GitHub Free later?Yes. You can start with GitHub Free and upgrade to GitHub Team at any time. Your repositories, workflows, and history stay the same.When should my team choose GitHub Enterprise?Choose GitHub Enterprise if your organization needs enterprise features like SAML single sign-on (SSO), GitHub Enterprise Server, or premium support. You can’t perform that action at this time.",
+            "category": "culture"
+          }
+        ],
+        "interview_process": {
+          "status": "no_results",
+          "findings": [],
+          "sources": [],
+          "warnings": [
+            "No reliable public interview-process information found."
+          ]
+        },
+        "failed_sources": [],
+        "warnings": [
+          "Robots.txt blocked: https://github.com/join?plan=business&ref_cta=Get%2520started%2520with%2520Team&ref_loc=team-page-hero&ref_page=%2Fteam&locale=en-US",
+          "Robots.txt blocked: https://github.com/join?plan=business&ref_cta=Continue%2520with%2520Team&ref_loc=bottom%2520plans&ref_page=%2Fteam%3Fpreview%3Dtrue&setup_organization=true&source=bottom+plans-team&locale=en-US",
+          "Robots.txt blocked: https://github.com/join?plan=business&ref_cta=Get%2520started%2520with%2520Team&ref_loc=team-page-footer&ref_page=%2Fteam%3Fpreview%3Dtrue&locale=en-US",
+          "No explicit hiring/careers page found.",
+          "No reliable public interview-process information found."
+        ]
+      }
+    }
+  }
+]

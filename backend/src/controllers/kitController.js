@@ -40,6 +40,12 @@ exports.createKit = async (req, res) => {
 
     const newKit = await kitService.createKit(userId, kitData);
 
+    // Fire background generation task
+    const researchService = require('../services/researchService');
+    researchService.runInitialResearch(newKit._id, userId, kitData.jd).catch(err => {
+      console.error('Background generation failed immediately:', err);
+    });
+
     res.status(201).json({
       kit: {
         id: newKit._id,
