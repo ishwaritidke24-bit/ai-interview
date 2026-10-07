@@ -29,7 +29,11 @@ The backend uses a targeted crawling engine (\`src/services/retrieval\`) to rese
 - **Link Discovery & Ranking:** Parses links and resolves relative paths securely. Ranks links based on anchor text, path keywords, and depth. Hiring and team pages score highest; login/cart pages are heavily penalized.
 - **Crawl Strategy:** Uses a bounded crawl (MAX_PAGES = 5). Partial failures do not crash the pipeline, they are recorded in `failed_sources`.
 
-
+## LLM Integration & Extraction
+- **Provider:** Google Gemini (`gemini-1.5-flash`) was chosen for its generous free tier and fast JSON extraction capabilities.
+- **Structured JSON Strategy:** The LLM client strictly enforces JSON extraction. It strips markdown blocks, parses the JSON, and structurally validates it against required schemas. If the model fails or returns malformed JSON, the pipeline catches it, retries up to 2 times with exponential backoff, and ultimately handles the error safely.
+- **Security / Untrusted Data:** Web crawled text and the Job Description are treated as untrusted data. They are structurally isolated from system instructions using strict delimiters (`--- UNTRUSTED DATA START ---`) and explicit instructions forbidding the LLM from executing commands found within the text.
+- **Company Brief & Requirement Extraction:** JD requirements are extracted strictly based on the text (no hallucination). "Required" skills map to priority `must`, while "Preferred" map to `nice`. They are categorized as `technical`, `behavioural`, or `domain`. Thin JDs produce correctly thin outputs. The company brief is generated entirely independently from the JD to prevent contamination.
 ## Kit Structure
 See \`shared/schema.js\` for the canonical Kit definition.
 
