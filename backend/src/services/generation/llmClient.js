@@ -2,7 +2,10 @@ const { parseJson } = require('./parseJson');
 const { sleep } = require('../retrieval/rateLimiter'); // Reuse sleep
 
 const callGeminiAPI = async (systemInstruction, taskPrompt, apiKey, model) => {
-  const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+  const isBearer = apiKey.startsWith('AQ.') || apiKey.startsWith('ya29.');
+  const url = isBearer 
+    ? `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
+    : `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
   
   const payload = {
     contents: [
@@ -12,28 +15,33 @@ const callGeminiAPI = async (systemInstruction, taskPrompt, apiKey, model) => {
       }
     ],
     generationConfig: {
-      temperature: 0.2, // Low temperature for deterministic JSON output
-      responseMimeType: 'application/json'
+      temperature: 0.2 // Low temperature for deterministic JSON output
     }
   };
 
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 15000); // Strict 15s timeout
 
+  const headers = { 'Content-Type': 'application/json' };
+  if (isBearer) {
+    headers['x-goog-api-key'] = apiKey;
+  }
+
   try {
     const res = await fetch(url, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers,
       body: JSON.stringify(payload),
       signal: controller.signal
     });
 
     if (!res.ok) {
+      const errText = await res.text().catch(() => 'No response body');
       if (res.status === 429) {
         const retryAfter = res.headers.get('retry-after');
         throw new Error(`LLM_RATE_LIMIT:${retryAfter || 2}`);
       }
-      throw new Error(`LLM_API_ERROR_${res.status}`);
+      throw new Error(`LLM_API_ERROR_${res.status}: ${errText}`);
     }
 
     const data = await res.json();
@@ -56,7 +64,7 @@ exports.generateStructured = async (systemInstruction, taskPrompt, requiredField
   const apiKey = process.env.LLM_API_KEY;
   const model = process.env.LLM_MODEL || 'gemini-1.5-flash';
   // Reduce retries to 1 to avoid hanging UI
-  const maxRetries = options.retries || 1;
+  const maxRetries = options.retries || 10;
   
   if (!apiKey) {
     throw new Error('LLM_API_KEY is not configured');
@@ -77,8 +85,8 @@ exports.generateStructured = async (systemInstruction, taskPrompt, requiredField
         // Validation error, append a correction request for the next prompt attempt
         taskPrompt += '\n\nIMPORTANT: Your previous output was invalid JSON or missing required fields. Ensure strictly compliant JSON format.';
       } else if (error.message.startsWith('LLM_RATE_LIMIT')) {
-        const parts = error.message.split(':');
-        delay = parts[1] ? parseInt(parts[1]) * 1000 : delay * 2;
+        console.log(`[RATE LIMIT] Sleeping for 65 seconds...`);
+        delay = 65000;
       } else if (error.message === 'LLM_TIMEOUT' || error.message.includes('LLM_API_ERROR_5')) {
         delay *= 2;
       } else {
@@ -87,7 +95,7 @@ exports.generateStructured = async (systemInstruction, taskPrompt, requiredField
       }
       
       if (attempt < maxRetries) {
-        await sleep(Math.min(delay, 5000)); // Cap backoff wait at 5s to avoid freezing
+        await sleep(delay); // Wait the full required time
       }
     }
   }

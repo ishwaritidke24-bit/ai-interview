@@ -25,13 +25,18 @@ exports.runInitialResearch = async (kitId, userId, jdText) => {
 
     // PARALLELIZE 1: Company Crawl + JD Extraction
     const tCrawlAndJd = Date.now();
-    const [crawlResult, roleResult] = await Promise.allSettled([
-      crawlCompany(kit.source.company_url),
-      (async () => {
-        const { systemInstruction: roleSys, taskPrompt: roleTask } = getRoleExtractionPrompt(jdText);
-        return generateStructured(roleSys, roleTask, ['title', 'responsibilities', 'requirements']);
-      })()
-    ]);
+    const crawlResult = await crawlCompany(kit.source.company_url)
+      .then(val => ({ status: 'fulfilled', value: val }))
+      .catch(err => ({ status: 'rejected', reason: err }));
+      
+    let roleResult;
+    try {
+      const { systemInstruction: roleSys, taskPrompt: roleTask } = getRoleExtractionPrompt(jdText);
+      const val = await generateStructured(roleSys, roleTask, ['title', 'responsibilities', 'requirements']);
+      roleResult = { status: 'fulfilled', value: val };
+    } catch (err) {
+      roleResult = { status: 'rejected', reason: err };
+    }
 
     if (roleResult.status === 'rejected') {
       throw new Error(`Role extraction failed: ${roleResult.reason.message}`);
