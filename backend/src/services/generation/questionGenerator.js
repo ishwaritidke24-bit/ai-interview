@@ -90,7 +90,7 @@ exports.generateQuestionsForKit = async (kit, targetRequirements = null) => {
           });
           normalizedPrompts.add(normalized);
         } catch (error) {
-          console.warn(`Failed to generate question for req ${req.id}:`, error.message);
+          throw new Error(`Failed to generate question for req ${req.id}: ${error.message}`);
         }
       }
       return questionsForReq;

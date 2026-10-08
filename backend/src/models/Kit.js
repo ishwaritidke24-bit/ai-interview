@@ -45,6 +45,13 @@ const kitSchema = new mongoose.Schema({
   generationStatus: {
     type: String
   },
+  generationStage: {
+    type: String
+  },
+  generationError: {
+    code: { type: String },
+    message: { type: String }
+  },
   source: {
     company: { type: String },
     company_url: { type: String },

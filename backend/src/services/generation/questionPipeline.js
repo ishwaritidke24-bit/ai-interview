@@ -12,14 +12,14 @@ exports.runQuestionGenerationPipeline = async (kit, onStageChange) => {
   kit.questions.push(...initialQuestions);
   passes++;
 
-  if (onStageChange) onStageChange('checking_coverage');
+  if (onStageChange) await onStageChange('checking_coverage');
 
   // Check coverage
   coverageResult = checkCoverage(kit.role.requirements, kit.questions);
 
   // PASS 2: If there are uncovered MUST requirements, run gap generation
   if (passes < MAX_COVERAGE_PASSES && coverageResult.uncovered_must_requirement_ids.length > 0) {
-    if (onStageChange) onStageChange('closing_coverage_gaps');
+    if (onStageChange) await onStageChange('closing_coverage_gaps');
     console.log(`Coverage Pass ${passes + 1} starting. Closing gaps for:`, coverageResult.uncovered_must_requirement_ids);
     
     // Extract the specific requirement objects that are missing MUSTs

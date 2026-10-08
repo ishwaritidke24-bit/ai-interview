@@ -12,9 +12,10 @@ exports.runInitialResearch = async (kitId, userId, jdText) => {
     console.log(`[GEN] Stage completed: ${stage} (${duration}s)`);
   };
 
+  let kit;
   try {
     console.log(`[GEN] Starting generation for kit: ${kitId}`);
-    const kit = await Kit.findOne({ _id: kitId, userId });
+    kit = await Kit.findOne({ _id: kitId, userId });
     if (!kit) throw new Error('Kit not found');
 
     kit.status = 'generating';
@@ -32,11 +33,14 @@ exports.runInitialResearch = async (kitId, userId, jdText) => {
       })()
     ]);
 
+    if (roleResult.status === 'rejected') {
+      throw new Error(`Role extraction failed: ${roleResult.reason.message}`);
+    }
     const research = crawlResult.status === 'fulfilled' ? crawlResult.value : { pages: [], sources: [], failed_sources: [], research_warnings: [] };
-    const roleData = roleResult.status === 'fulfilled' ? roleResult.value : { title: 'Unknown Role', seniority: '', responsibilities: [], requirements: [] };
+    const roleData = roleResult.value;
 
     kit.role = {
-      title: roleData.title || 'Unknown Role',
+      title: roleData.title,
       seniority: roleData.seniority || '',
       responsibilities: roleData.responsibilities || [],
       requirements: roleData.requirements || []
@@ -56,8 +60,7 @@ exports.runInitialResearch = async (kitId, userId, jdText) => {
       try {
         companyBriefData = await generateStructured(briefSys, briefTask, ['summary', 'what_they_do', 'sources']);
       } catch (e) {
-        console.error('Failed to generate company brief:', e);
-        companyBriefData = { summary: 'Information could not be extracted automatically.', what_they_do: '', sources: research.sources };
+        throw new Error(`Company brief generation failed: ${e.message}`);
       }
     } else {
       companyBriefData = { summary: 'No accessible company information found.', what_they_do: '', sources: [] };
@@ -98,10 +101,10 @@ exports.runInitialResearch = async (kitId, userId, jdText) => {
     
     const tQuestions = Date.now();
     const { runQuestionGenerationPipeline } = require('./generation/questionPipeline');
-    await runQuestionGenerationPipeline(kit, (stage) => {
+    await runQuestionGenerationPipeline(kit, async (stage) => {
       console.log(`[GEN] Stage: ${stage}`);
       kit.generationStatus = stage;
-      kit.save().catch(e => console.error('[GEN][ERROR] Error saving sub-stage', e));
+      await kit.save().catch(e => console.error('[GEN][ERROR] Error saving sub-stage', e));
     });
     logTime('generating_questions', tQuestions);
 
@@ -136,6 +139,9 @@ exports.runInitialResearch = async (kitId, userId, jdText) => {
     await kit.save();
     console.log(`[GEN] Stage: finalizing`);
 
+    const { validateKit } = require('./validation/kitValidator');
+    validateKit(kit);
+
     kit.status = 'completed'; // Mark completed
     kit.generationStatus = 'completed';
     await kit.save();
@@ -144,15 +150,27 @@ exports.runInitialResearch = async (kitId, userId, jdText) => {
     logTime('completed', startTime);
     return kit;
   } catch (error) {
-    console.error('[GEN][ERROR] Research error:', error);
+    console.error(`[GEN][FAILED]
+kitId: ${kitId}
+stage: ${kit ? kit.generationStatus : 'unknown'}
+error name: ${error.name}
+error message: ${error.message}
+stack: ${error.stack}`);
     try {
       const Kit = require('../models/Kit');
       const k = await Kit.findOne({ _id: kitId, userId });
       if (k) {
+        const currentStage = k.generationStatus;
         k.status = 'failed';
         k.generationStatus = 'failed';
+        k.generationStage = currentStage !== 'failed' ? currentStage : 'unknown';
+        k.generationError = {
+          code: error.name || 'UNKNOWN',
+          message: error.message || 'Generation failed.'
+        };
         k.internal_research = k.internal_research || {};
         k.internal_research.error = error.message;
+        k.markModified('internal_research');
         await k.save();
         console.log(`[GEN] Stage: failed`);
       }

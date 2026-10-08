@@ -143,10 +143,13 @@ exports.getKitStatus = async (req, res) => {
     if (kit.status === 'failed') {
       return res.json({
         status: kit.status,
-        stage: kit.generationStatus,
-        progress: 0,
+        stage: kit.generationStage || kit.generationStatus || 'unknown',
+        progress: kit.generationStage ? (stages[kit.generationStage]?.progress || 0) : 0,
         message: 'We couldn\'t complete your kit.',
-        error: { message: kit.internal_research?.error || 'Generation failed.' }
+        error: {
+          code: kit.generationError?.code || 'UNKNOWN',
+          message: kit.generationError?.message || kit.internal_research?.error || 'Generation failed.'
+        }
       });
     }
 
@@ -274,13 +277,7 @@ exports.retryGeneration = async (req, res) => {
     kit.status = 'queued';
     kit.generationStatus = 'queued';
     
-    // Clear out partial results to ensure a fresh generation from scratch
-    kit.internal_research = {};
-    kit.company_brief = { summary: '', what_they_do: '', sources: [] };
-    kit.role = { title: '', seniority: '', responsibilities: [], requirements: [] };
-    kit.questions = [];
-    kit.flashcards = [];
-    kit.coverage = { uncovered_requirement_ids: [], passes: 0 };
+    // Do not blindly wipe partial results to ensure we don't lose progress
     
     await kit.save();
 
