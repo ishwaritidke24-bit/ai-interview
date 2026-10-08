@@ -11,6 +11,12 @@
     "evaluate": "node backend/src/evaluate/index.js"
   },
   "devDependencies": {
-    "concurrently": "^8.2.2"
+    "axios": "^1.20.0",
+    "axios-cookiejar-support": "^7.0.0",
+    "concurrently": "^8.2.2",
+    "tough-cookie": "^6.0.2"
+  },
+  "dependencies": {
+    "node-fetch": "^2.7.0"
   }
 }

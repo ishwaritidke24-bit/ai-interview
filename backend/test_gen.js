@@ -3,7 +3,7 @@ const { wrapper } = require('axios-cookiejar-support');
 const { CookieJar } = require('tough-cookie');
 
 const jar = new CookieJar();
-const client = wrapper(axios.create({ jar, withCredentials: true, baseURL: 'http://localhost:3001' }));
+const client = wrapper(axios.create({ jar, withCredentials: true, baseURL: 'http://localhost:3008' }));
 
 async function runTest() {
   try {
