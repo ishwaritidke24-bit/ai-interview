@@ -15,10 +15,15 @@ if (missingEnvVars.length > 0) {
   process.exit(1);
 }
 
+const { verifyLLMConfig } = require('./services/generation/llmClient');
+
 const port = process.env.PORT || 3001;
 
-app.listen(port, () => {
-  console.log(`Backend server listening on port ${port}`);
+// Verify LLM configuration before starting server
+verifyLLMConfig().then(() => {
+  app.listen(port, () => {
+    console.log(`Backend server listening on port ${port}`);
+  });
 });
 
 connectDB().catch(err => {

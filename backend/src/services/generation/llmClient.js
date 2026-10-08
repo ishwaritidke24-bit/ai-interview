@@ -102,3 +102,52 @@ exports.generateStructured = async (systemInstruction, taskPrompt, requiredField
 
   throw new Error(`LLM generation failed after ${maxRetries} retries. Last error: ${lastError.message}`);
 };
+
+exports.verifyLLMConfig = async () => {
+  const apiKey = process.env.LLM_API_KEY;
+  const model = process.env.LLM_MODEL || 'gemini-1.5-flash';
+  
+  if (!apiKey) {
+    console.error('[FATAL] Missing LLM_API_KEY in environment');
+    process.exit(1);
+  }
+
+  const isBearer = apiKey.startsWith('AQ.') || apiKey.startsWith('ya29.');
+  const url = isBearer 
+    ? `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`
+    : `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+  const payload = {
+    contents: [{ role: 'user', parts: [{ text: 'Respond with exactly one word: "OK"' }] }],
+    generationConfig: { temperature: 0.2 }
+  };
+
+  const headers = { 'Content-Type': 'application/json' };
+  if (isBearer) {
+    headers['x-goog-api-key'] = apiKey;
+  }
+
+  try {
+    const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
+    if (!res.ok) {
+      const errText = await res.text().catch(() => 'No response body');
+      console.error(`\n[FATAL] LLM CONFIGURATION TEST FAILED`);
+      console.error(`Endpoint: ${url.split('?')[0]}`);
+      console.error(`Model: ${model}`);
+      console.error(`Status: ${res.status}`);
+      console.error(`Error: ${errText}\n`);
+      console.error(`Your API key and model combination is incompatible with the standard Gemini REST API.`);
+      process.exit(1);
+    }
+    
+    const data = await res.json();
+    if (!data.candidates || data.candidates.length === 0) {
+      console.error('[FATAL] LLM returned empty response.');
+      process.exit(1);
+    }
+    console.log(`[INFO] LLM configuration verified. Model: ${model}`);
+  } catch (err) {
+    console.error(`[FATAL] LLM connection failed: ${err.message}`);
+    process.exit(1);
+  }
+};

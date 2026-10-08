@@ -50,11 +50,12 @@ npm install
 ### 2. Configure Environment Variables
 Create `.env` in the `backend/` folder:
 ```env
-PORT=5000
+PORT=3001
 MONGODB_URI=mongodb://127.0.0.1:27017/ai_interview_prep
 SESSION_SECRET=your_secure_random_string
 FRONTEND_URL=http://localhost:3000
-GEMINI_API_KEY=your_gemini_api_key  # Or OPENAI_API_KEY if utilizing OpenAI abstraction
+LLM_API_KEY=YOUR_API_KEY_HERE
+LLM_MODEL=gemini-1.5-flash
 ```
 
 Create `.env.local` in the `frontend/` folder:
