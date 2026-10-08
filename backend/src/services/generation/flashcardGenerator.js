@@ -13,68 +13,51 @@ exports.generateFlashcardsForKit = async (kit) => {
   const generatedFlashcards = [];
   const normalizedFronts = new Set();
 
+  const existingFlashcards = Array.isArray(kit.flashcards) ? kit.flashcards : [];
+  existingFlashcards.forEach(card => {
+    if (card.front) normalizedFronts.add(normalizeString(card.front));
+  });
+
   const roleContext = `Title: ${kit.role.title}, Seniority: ${kit.role.seniority}`;
   // REDUCE CONTEXT
   const companyContext = kit.company_brief?.what_they_do?.substring(0, 300) || 'Unknown';
 
-  let nextFid = 1;
+  let nextFid = existingFlashcards.length + 1;
   const reqsToProcess = kit.role.requirements.slice(0, 7);
 
-  for (let i = 0; i < reqsToProcess.length; i += 2) {
-    const batch = reqsToProcess.slice(i, i + 2);
-    
-    const promises = batch.map(async (req) => {
-      const countNeeded = req.priority === 'must' ? CARDS_PER_MUST : CARDS_PER_NICE;
+  for (const req of reqsToProcess) {
+    const countNeeded = req.priority === 'must' ? CARDS_PER_MUST : CARDS_PER_NICE;
+    const relatedQuestions = (kit.questions || [])
+      .filter(q => q.requirement_ids && q.requirement_ids.includes(req.id))
+      .map(q => q.prompt);
 
-      const relatedQuestions = kit.questions
-        .filter(q => q.requirement_ids && q.requirement_ids.includes(req.id))
-        .map(q => q.prompt);
-      
-      let relatedQuestionsContext = 'None';
-      if (relatedQuestions.length > 0) {
-        relatedQuestionsContext = relatedQuestions.slice(0, 1).join(' | ').substring(0, 150); 
-      }
+    const relatedQuestionsContext = relatedQuestions.length > 0
+      ? relatedQuestions.slice(0, 1).join(' | ').substring(0, 150)
+      : 'None';
+    const { systemInstruction, taskPrompt } = getFlashcardGenerationPrompt(
+      req.text, countNeeded, relatedQuestionsContext, roleContext, companyContext
+    );
 
-      const { systemInstruction, taskPrompt } = getFlashcardGenerationPrompt(
-        req.text, countNeeded, relatedQuestionsContext, roleContext, companyContext
-      );
+    try {
+      const fcData = await generateStructured(systemInstruction, taskPrompt, ['cards']);
+      if (!Array.isArray(fcData.cards)) throw new Error('LLM did not return a cards array');
 
-      try {
-        const fcData = await generateStructured(systemInstruction, taskPrompt, ['cards']);
-        if (!Array.isArray(fcData.cards)) throw new Error('LLM did not return a cards array');
-        
-        const validCards = [];
-        for (const card of fcData.cards) {
-          if (!card.front || !card.back) continue;
+      for (const card of fcData.cards) {
+        if (!card.front || !card.back) continue;
 
-          const normalized = normalizeString(card.front);
-          if (normalizedFronts.has(normalized)) continue;
-          
-          validCards.push({
-            id: `f${nextFid++}`, // Using nextFid asynchronously can be tricky, but push happens sequentially
-            front: card.front,
-            back: card.back,
-            reqId: req.id
-          });
-          normalizedFronts.add(normalized);
-        }
-        return validCards;
-      } catch (error) {
-        console.warn(`Failed to generate flashcards for req ${req.id}:`, error.message);
-        return [];
-      }
-    });
+        const normalized = normalizeString(card.front);
+        if (normalizedFronts.has(normalized)) continue;
 
-    const results = await Promise.all(promises);
-    for (const cardsForReq of results) {
-      for (const c of cardsForReq) {
         generatedFlashcards.push({
           id: `f${nextFid++}`,
-          front: c.front,
-          back: c.back,
-          requirement_ids: [c.reqId]
+          front: card.front,
+          back: card.back,
+          requirement_ids: [req.id]
         });
+        normalizedFronts.add(normalized);
       }
+    } catch (error) {
+      console.warn(`Failed to generate flashcards for req ${req.id}:`, error.message);
     }
   }
 

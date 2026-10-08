@@ -19,8 +19,6 @@ const determineCategories = (requirement, role, interviewResearch) => {
     return ['technical', 'company-fit'];
   }
 
-  cats.push('technical');
-
   const triggersSystemDesign = 
     reqText.includes('architecture') || reqText.includes('scale') || 
     reqText.includes('system') || reqText.includes('api') || 
@@ -32,13 +30,16 @@ const determineCategories = (requirement, role, interviewResearch) => {
     cats.push('system-design');
   }
 
+  cats.push('technical');
+
   return cats;
 };
 
 exports.generateQuestionsForKit = async (kit, targetRequirements = null) => {
   const generatedQuestions = [];
   const normalizedPrompts = new Set();
-  const existingPrompts = kit.questions.map(q => normalizeString(q.prompt));
+  const existingQuestions = Array.isArray(kit.questions) ? kit.questions : [];
+  const existingPrompts = existingQuestions.map(q => normalizeString(q.prompt));
   existingPrompts.forEach(p => normalizedPrompts.add(p));
 
   const roleContext = `Title: ${kit.role.title}, Seniority: ${kit.role.seniority}`;
@@ -53,60 +54,43 @@ exports.generateQuestionsForKit = async (kit, targetRequirements = null) => {
     }
   }
 
-  let nextQid = kit.questions.length + 1;
+  let nextQid = existingQuestions.length + 1;
   // Cap at max 4 requirements to prevent excessive generation
   const reqs = targetRequirements || kit.role.requirements;
   const requirementsToProcess = reqs.slice(0, 4);
 
-  // Simple concurrency limit (batch of 2)
-  for (let i = 0; i < requirementsToProcess.length; i += 2) {
-    const batch = requirementsToProcess.slice(i, i + 2);
-    const promises = batch.map(async (req) => {
-      const categories = determineCategories(req, kit.role, kit.internal_research?.interview_process);
-      const countNeeded = req.priority === 'must' ? QUESTIONS_PER_MUST : QUESTIONS_PER_NICE;
-      const questionsForReq = [];
+  // Serialize provider calls so one failed or rate-limited request does not
+  // discard successful questions or amplify a provider quota error.
+  for (const req of requirementsToProcess) {
+    const categories = determineCategories(req, kit.role, kit.internal_research?.interview_process);
+    const countNeeded = req.priority === 'must' ? QUESTIONS_PER_MUST : QUESTIONS_PER_NICE;
 
-      for (let j = 0; j < countNeeded; j++) {
-        const targetCategory = categories[j % categories.length];
-        const { systemInstruction, taskPrompt } = getQuestionGenerationPrompt(
-          req.text, targetCategory, companyContext, interviewContextStr, roleContext
-        );
+    for (let j = 0; j < countNeeded; j++) {
+      const targetCategory = categories[j % categories.length];
+      const { systemInstruction, taskPrompt } = getQuestionGenerationPrompt(
+        req.text, targetCategory, companyContext, interviewContextStr, roleContext
+      );
 
-        try {
-          const qData = await generateStructured(systemInstruction, taskPrompt, ['prompt', 'answer_outline', 'difficulty']);
-          const diff = parseInt(qData.difficulty);
-          if (isNaN(diff) || diff < 1 || diff > 3) throw new Error('Invalid difficulty');
-          if (!qData.prompt || !qData.answer_outline) throw new Error('Missing prompt or outline');
+      try {
+        const qData = await generateStructured(systemInstruction, taskPrompt, ['prompt', 'answer_outline', 'difficulty']);
+        const diff = parseInt(qData.difficulty, 10);
+        if (Number.isNaN(diff) || diff < 1 || diff > 3) throw new Error('Invalid difficulty');
+        if (!qData.prompt || !qData.answer_outline) throw new Error('Missing prompt or outline');
 
-          const normalized = normalizeString(qData.prompt);
-          if (normalizedPrompts.has(normalized)) continue;
+        const normalized = normalizeString(qData.prompt);
+        if (normalizedPrompts.has(normalized)) continue;
 
-          questionsForReq.push({
-            reqId: req.id,
-            category: targetCategory,
-            prompt: qData.prompt,
-            answer_outline: qData.answer_outline,
-            difficulty: diff
-          });
-          normalizedPrompts.add(normalized);
-        } catch (error) {
-          throw new Error(`Failed to generate question for req ${req.id}: ${error.message}`);
-        }
-      }
-      return questionsForReq;
-    });
-
-    const results = await Promise.all(promises);
-    for (const reqQuestions of results) {
-      for (const q of reqQuestions) {
         generatedQuestions.push({
           id: `q${nextQid++}`,
-          requirement_ids: [q.reqId],
-          category: q.category,
-          prompt: q.prompt,
-          answer_outline: q.answer_outline,
-          difficulty: q.difficulty
+          requirement_ids: [req.id],
+          category: targetCategory,
+          prompt: qData.prompt,
+          answer_outline: qData.answer_outline,
+          difficulty: diff
         });
+        normalizedPrompts.add(normalized);
+      } catch (error) {
+        console.warn(`Failed to generate question for req ${req.id}: ${error.message}`);
       }
     }
   }

@@ -23,7 +23,8 @@ exports.allocateSchedule = ({ requirements, questions, daysAvailable }) => {
     const score = priorityScore + diffScore;
 
     return {
-      ...q,
+      id: q.id,
+      category: q.category,
       score,
       minutes: timeMapping[parseInt(q.difficulty) || 1] || 10,
       isMust
@@ -61,8 +62,8 @@ exports.allocateSchedule = ({ requirements, questions, daysAvailable }) => {
     if (day.question_ids.length === 0) {
       day.focus = 'Review and consolidation';
     } else {
-      const cats = Array.from(day.categories);
-      day.focus = cats.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(' & ') + ' Review';
+      const cats = Array.from(day.categories).filter(c => typeof c === 'string' && c.length > 0);
+      day.focus = cats.length > 0 ? cats.map(c => c.charAt(0).toUpperCase() + c.slice(1)).join(' & ') + ' Review' : 'General Review';
     }
     // Clean up temporary set
     delete day.categories;

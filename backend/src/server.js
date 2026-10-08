@@ -15,17 +15,40 @@ if (missingEnvVars.length > 0) {
   process.exit(1);
 }
 
-const { verifyLLMConfig } = require('./services/generation/llmClient');
+const port = Number(process.env.PORT || 3001);
 
-const port = process.env.PORT || 3001;
+const exitWithStartupError = (message) => {
+  console.error(`[FATAL] ${message}`);
+  process.exit(1);
+};
 
-// Verify LLM configuration before starting server
-verifyLLMConfig().then(() => {
-  app.listen(port, () => {
+const startServer = async () => {
+  if (!Number.isInteger(port) || port < 1 || port > 65535) {
+    exitWithStartupError('PORT must be an integer between 1 and 65535.');
+    return;
+  }
+
+  try {
+    // Do not make a billable LLM request during startup. API failures are reported
+    // against the generation job, while the health and auth endpoints remain usable.
+    await connectDB();
+  } catch (error) {
+    exitWithStartupError(`Unable to connect to MongoDB: ${error.message}`);
+    return;
+  }
+
+  const server = app.listen(port, () => {
     console.log(`Backend server listening on port ${port}`);
   });
-});
 
-connectDB().catch(err => {
-  console.error("Warning: Could not connect to MongoDB on startup. Make sure MongoDB is running.", err.message);
-});
+  server.on('error', (error) => {
+    if (error.code === 'EADDRINUSE') {
+      exitWithStartupError(`Port ${port} is already in use. Stop the other backend process or set PORT to a free port.`);
+      return;
+    }
+
+    exitWithStartupError(`HTTP server failed to start: ${error.message}`);
+  });
+};
+
+startServer();

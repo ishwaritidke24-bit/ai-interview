@@ -2,7 +2,8 @@ const { fetchWithRetry } = require('./rateLimiter');
 const { isSafeUrl } = require('../../utils/urlSafety');
 
 exports.fetchPage = async (url) => {
-  if (!isSafeUrl(url)) {
+  const safe = await isSafeUrl(url);
+  if (!safe) {
     return { url, status: 'failed', error: 'UNSAFE_URL' };
   }
 

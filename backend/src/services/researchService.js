@@ -77,9 +77,20 @@ exports.runInitialResearch = async (kitId, userId, jdText) => {
       what_they_do: companyBriefData.what_they_do || '',
       sources: companyBriefData.sources || []
     };
+    // Set company name for later interview research. Fallback to domain if not provided.
     if (companyBriefData.company_name) {
-      kit.source.company = companyBriefData.company_name;
+        kit.source.company = companyBriefData.company_name;
+    } else {
+        try {
+            const urlObj = new URL(kit.source.company_url);
+            kit.source.company = urlObj.hostname.replace('www.', '').split('.')[0];
+        } catch (e) {
+            console.warn('Failed to parse company URL for name fallback', e);
+            kit.source.company = '';
+        }
     }
+
+
 
     kit.generationStatus = 'researching_interviews';
     await kit.save();

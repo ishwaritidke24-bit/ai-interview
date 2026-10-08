@@ -94,7 +94,7 @@ const kitSchema = new mongoose.Schema({
   },
   coverage: {
     uncovered_requirement_ids: [{ type: String }],
-    passes: { type: Boolean }
+    passes: { type: Number, default: 0 }
   }
 }, {
   timestamps: true // Adds createdAt and updatedAt

@@ -11,13 +11,14 @@ async function runTest() {
     const email = `test-${Date.now()}@example.com`;
     const password = 'password123';
     console.log(`Registering ${email}...`);
-    await client.post('/api/auth/register', { email, password, name: 'Test User' });
+    await client.post('/api/auth/register', { email, password, name: 'Test User' }).catch(e => { /* ignore if exists */ });
+    console.log(`Logging in ${email}...`);
     await client.post('/api/auth/login', { email, password });
 
     // 2. Start generation
     console.log('Starting kit generation...');
     const res = await client.post('/api/kits', {
-      jd: "Junior Full Stack Developer",
+      jd: "Junior Full Stack Developer. Requirements: Must have 1 year of React. Must know Node.js and Express. Experience with MongoDB is a plus. Behavioral: Must be a team player.",
       company_url: "https://www.github.com",
       days: 5
     });

@@ -63,8 +63,9 @@ const callGeminiAPI = async (systemInstruction, taskPrompt, apiKey, model) => {
 exports.generateStructured = async (systemInstruction, taskPrompt, requiredFields = [], options = {}) => {
   const apiKey = process.env.LLM_API_KEY;
   const model = process.env.LLM_MODEL || 'gemini-1.5-flash';
-  // Reduce retries to 1 to avoid hanging UI
-  const maxRetries = options.retries || 10;
+  // Keep generation jobs responsive. A retry is enough for transient failures;
+  // the user can explicitly retry a failed kit after a provider quota reset.
+  const maxRetries = options.retries ?? 1;
   
   if (!apiKey) {
     throw new Error('LLM_API_KEY is not configured');
@@ -85,8 +86,11 @@ exports.generateStructured = async (systemInstruction, taskPrompt, requiredField
         // Validation error, append a correction request for the next prompt attempt
         taskPrompt += '\n\nIMPORTANT: Your previous output was invalid JSON or missing required fields. Ensure strictly compliant JSON format.';
       } else if (error.message.startsWith('LLM_RATE_LIMIT')) {
-        console.log(`[RATE LIMIT] Sleeping for 65 seconds...`);
-        delay = 65000;
+        const retryAfterSeconds = Number.parseInt(error.message.split(':')[1], 10);
+        delay = Number.isFinite(retryAfterSeconds) && retryAfterSeconds > 0
+          ? retryAfterSeconds * 1000
+          : 2000;
+        console.log(`[RATE LIMIT] Retrying in ${Math.ceil(delay / 1000)} seconds...`);
       } else if (error.message === 'LLM_TIMEOUT' || error.message.includes('LLM_API_ERROR_5')) {
         delay *= 2;
       } else {
@@ -108,8 +112,7 @@ exports.verifyLLMConfig = async () => {
   const model = process.env.LLM_MODEL || 'gemini-1.5-flash';
   
   if (!apiKey) {
-    console.error('[FATAL] Missing LLM_API_KEY in environment');
-    process.exit(1);
+    throw new Error('Missing LLM_API_KEY in environment');
   }
 
   const isBearer = apiKey.startsWith('AQ.') || apiKey.startsWith('ya29.');
@@ -131,23 +134,16 @@ exports.verifyLLMConfig = async () => {
     const res = await fetch(url, { method: 'POST', headers, body: JSON.stringify(payload) });
     if (!res.ok) {
       const errText = await res.text().catch(() => 'No response body');
-      console.error(`\n[FATAL] LLM CONFIGURATION TEST FAILED`);
-      console.error(`Endpoint: ${url.split('?')[0]}`);
-      console.error(`Model: ${model}`);
-      console.error(`Status: ${res.status}`);
-      console.error(`Error: ${errText}\n`);
-      console.error(`Your API key and model combination is incompatible with the standard Gemini REST API.`);
-      process.exit(1);
+      throw new Error(`LLM configuration test failed for model ${model} (HTTP ${res.status}): ${errText}`);
     }
     
     const data = await res.json();
     if (!data.candidates || data.candidates.length === 0) {
-      console.error('[FATAL] LLM returned empty response.');
-      process.exit(1);
+      throw new Error('LLM returned an empty response during configuration test.');
     }
     console.log(`[INFO] LLM configuration verified. Model: ${model}`);
+    return { model };
   } catch (err) {
-    console.error(`[FATAL] LLM connection failed: ${err.message}`);
-    process.exit(1);
+    throw new Error(`LLM connection failed: ${err.message}`);
   }
 };
